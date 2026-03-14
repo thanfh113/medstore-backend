@@ -1,0 +1,28 @@
+ktor:
+  application:
+    modules:
+      - com.example.nhathuoc.ApplicationKt.module
+  deployment:
+    port: 8080
+    host: 0.0.0.0
+
+jwt:
+  secret: "nhathuoc-super-secret-key-change-in-production"
+  issuer: "nhathuoc-backend"
+  audience: "nhathuoc-clients"
+  access_token_expiry: 900000      # 15 minutes in ms
+  refresh_token_expiry: 604800000  # 7 days in ms
+
+database:
+  url: "jdbc:mysql://localhost:3306/nhathuoc_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true"
+  driver: "com.mysql.cj.jdbc.Driver"
+  user: "root"
+  password: "123456"
+  max_pool_size: 10
+
+cloudinary:
+  cloud_name: "Root"   # ← Điền vào sau khi tạo tài khoản Cloudinary
+  api_key:    "599651812862278"
+  api_secret: "4mJHbrrN5Mesn9xeb7uyYunHukM"
+  # Folder gốc trong Cloudinary
+  folder_prefix: "nhathuoc"
