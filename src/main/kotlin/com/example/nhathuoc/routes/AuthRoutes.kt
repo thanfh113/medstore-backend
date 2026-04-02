@@ -29,13 +29,14 @@ import kotlin.time.Duration.Companion.days
 @Serializable
 data class RegisterRequest(
     val phone: String,
+    val email: String,
     val password: String,
     val fullName: String? = null
 )
 
 @Serializable
 data class LoginRequest(
-    val phone: String,
+    val credential: String,  // email hoặc phone
     val password: String
 )
 
@@ -61,6 +62,13 @@ data class UserResponse(
     val avatarUrl: String?
 )
 
+// ─── Utilities ───────────────────────────────────────────────────
+
+private fun isValidEmail(email: String): Boolean {
+    val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    return emailRegex.matches(email)
+}
+
 // ─── Routes ──────────────────────────────────────────────────────
 
 fun Route.authRoutes() {
@@ -70,15 +78,22 @@ fun Route.authRoutes() {
         post("/register") {
             val req = call.receive<RegisterRequest>()
 
-            if (req.phone.isBlank() || req.password.isBlank())
-                throw BadRequestException("Số điện thoại và mật khẩu không được để trống")
+            if (req.phone.isBlank() || req.email.isBlank() || req.password.isBlank())
+                throw BadRequestException("Số điện thoại, email và mật khẩu không được để trống")
+            if (!isValidEmail(req.email))
+                throw BadRequestException("Email không hợp lệ. Vui lòng sử dụng định dạng @domain.com")
             if (req.password.length < 6)
                 throw BadRequestException("Mật khẩu phải có ít nhất 6 ký tự")
 
-            val exists = transaction {
+            val existsPhone = transaction {
                 UsersTable.selectAll().where { UsersTable.phone eq req.phone }.count() > 0
             }
-            if (exists) throw ConflictException("Số điện thoại đã được đăng ký")
+            if (existsPhone) throw ConflictException("Số điện thoại đã được đăng ký")
+
+            val existsEmail = transaction {
+                UsersTable.selectAll().where { UsersTable.email eq req.email }.count() > 0
+            }
+            if (existsEmail) throw ConflictException("Email đã được đăng ký")
 
             val userId       = UUID.randomUUID().toString()
             val hashedPwd    = PasswordHelper.hash(req.password)
@@ -89,6 +104,7 @@ fun Route.authRoutes() {
                 UsersTable.insert {
                     it[UsersTable.id]       = userId
                     it[UsersTable.phone]    = req.phone
+                    it[UsersTable.email]    = req.email
                     it[UsersTable.password] = hashedPwd
                     it[UsersTable.fullName] = req.fullName
                     it[UsersTable.role]     = "USER"
@@ -114,7 +130,7 @@ fun Route.authRoutes() {
                         id        = userId,
                         phone     = req.phone,
                         fullName  = req.fullName,
-                        email     = null,
+                        email     = req.email,
                         role      = "USER",
                         avatarUrl = null
                     )
@@ -127,7 +143,9 @@ fun Route.authRoutes() {
             val req = call.receive<LoginRequest>()
 
             val user = transaction {
-                UsersTable.selectAll().where { UsersTable.phone eq req.phone }.firstOrNull()
+                UsersTable.selectAll()
+                    .where { (UsersTable.email eq req.credential) or (UsersTable.phone eq req.credential) }
+                    .firstOrNull()
             } ?: throw NotFoundException("Tài khoản không tồn tại")
 
             if (!PasswordHelper.verify(req.password, user[UsersTable.password]))

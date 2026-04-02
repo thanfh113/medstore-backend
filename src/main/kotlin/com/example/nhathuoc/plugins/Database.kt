@@ -32,35 +32,56 @@ fun Application.configureDatabase() {
     // Tạo các bảng nếu chưa tồn tại
     transaction {
         SchemaUtils.createMissingTablesAndColumns(
+            // Core user & authentication tables
             UsersTable,
             RefreshTokensTable,
+
+            // Shop & business tables
             ShopsTable,
             PharmacyBranchesTable,
+
+            // Product & category tables
             CategoriesTable,
             ProductsTable,
             ProductImagesTable,
             ProductCertificatesTable,
-            DiseaseCategoriesTable,
             ProductDiseasesTable,
+
+            // Order & cart tables
             CartItemsTable,
             UserAddressesTable,
             OrdersTable,
             OrderItemsTable,
             PrescriptionsTable,
+
+            // Reward system tables
             RewardAccountsTable,
             RewardTransactionsTable,
             RewardProductsTable,
             RewardRedemptionsTable,
-            VaccinesTable,
-            VaccineBookingsTable,
+
+            // Chat & AI tables
             ChatSessionsTable,
             ChatMessagesTable,
+            AiConversationsTable,
             ReviewsTable,
             NotificationsTable,
+
+            // CMS & content tables
             BannersTable,
             HealthArticlesTable,
+            DiseaseCategoriesTable,
+            AiChatbotSettingsTable,
+
+            // Payment tables
             PaymentMethodsTable,
-            PaymentsTable
+            PaymentsTable,
+
+            // Dynamic schema & inventory tables
+            CategoryAttributesTable,
+            ProductAttributeValuesTable,
+            ProductBatchesTable,
+            OrderItemBatchesTable
         )
     }
 

@@ -12,6 +12,16 @@ plugins {
 group = "com.example.nhathuoc"
 version = "0.0.1"
 
+kotlin {
+    jvmToolchain(17)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
 application {
     mainClass = "com.example.nhathuoc.ApplicationKt"
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")

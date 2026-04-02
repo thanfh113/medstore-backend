@@ -4,6 +4,7 @@ import com.example.nhathuoc.util.CloudinaryHelper
 import com.example.nhathuoc.util.CloudinaryHelper.UploadType
 import io.ktor.http.*
 import io.ktor.http.content.*
+import io.ktor.server.application.log
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*

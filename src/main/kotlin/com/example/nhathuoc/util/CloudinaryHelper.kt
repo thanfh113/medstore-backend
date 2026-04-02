@@ -1,20 +1,19 @@
 package com.example.nhathuoc.util
 
 import com.cloudinary.Cloudinary
-import com.cloudinary.util.ObjectUtils
 import io.ktor.server.application.*
 
 /**
  * Helper upload/delete media lên Cloudinary.
  *
  * Folder structure trên Cloudinary:
- *   nhathuoc/product_images/   ← ảnh sản phẩm
- *   nhathuoc/product_videos/   ← video sản phẩm (< 10s)
- *   nhathuoc/certificates/     ← giấy tờ công bố
- *   nhathuoc/prescriptions/    ← đơn thuốc kê (private)
- *   nhathuoc/avatars/          ← ảnh đại diện user
- *   nhathuoc/banners/          ← banner quảng cáo
- *   nhathuoc/shop_logos/       ← logo nhà thuốc
+ *   medstore/product_images/   ← ảnh sản phẩm
+ *   medstore/product_videos/   ← video sản phẩm (< 10s)
+ *   medstore/certificates/     ← giấy tờ chứng nhận (CE, ISO, FDA)
+ *   medstore/prescriptions/    ← đơn thuốc scan
+ *   medstore/avatars/          ← ảnh đại diện user
+ *   medstore/banners/          ← banner quảng cáo
+ *   medstore/supplier_logos/   ← logo nhà cung cấp vật tư y tế
  */
 object CloudinaryHelper {
 
@@ -26,10 +25,10 @@ object CloudinaryHelper {
         PRODUCT_IMAGE  ("product_images",  "image", 5 * 1024 * 1024),   // 5 MB
         PRODUCT_VIDEO  ("product_videos",  "video", 20 * 1024 * 1024),  // 20 MB (< 10s)
         CERTIFICATE    ("certificates",    "image", 10 * 1024 * 1024),  // 10 MB (ảnh/PDF scan)
-        PRESCRIPTION   ("prescriptions",   "image", 10 * 1024 * 1024),  // 10 MB
+        PRESCRIPTION   ("prescriptions",   "image", 10 * 1024 * 1024),  // 10 MB (đơn thuốc scan)
         AVATAR         ("avatars",         "image", 2 * 1024 * 1024),   // 2 MB
         BANNER         ("banners",         "image", 5 * 1024 * 1024),   // 5 MB
-        SHOP_LOGO      ("shop_logos",      "image", 3 * 1024 * 1024),   // 3 MB
+        SUPPLIER_LOGO  ("supplier_logos",  "image", 3 * 1024 * 1024),   // 3 MB
         REWARD_PRODUCT ("reward_products", "image", 5 * 1024 * 1024),   // 5 MB
     }
 
@@ -40,14 +39,13 @@ object CloudinaryHelper {
         val apiSecret = config.property("cloudinary.api_secret").getString()
         folderPrefix  = config.property("cloudinary.folder_prefix").getString()
 
-        cloudinary = Cloudinary(
-            ObjectUtils.asMap(
-                "cloud_name", cloudName,
-                "api_key",    apiKey,
-                "api_secret", apiSecret,
-                "secure",     true
-            )
+        val configMap = mapOf(
+            "cloud_name" to cloudName,
+            "api_key" to apiKey,
+            "api_secret" to apiSecret,
+            "secure" to true
         )
+        cloudinary = Cloudinary(configMap)
 
         application.log.info("Cloudinary initialized: cloud=$cloudName")
     }
@@ -68,9 +66,9 @@ object CloudinaryHelper {
         val folder = "$folderPrefix/${type.folder}"
 
         val params = mutableMapOf<String, Any>(
-            "folder",        folder,
-            "resource_type", type.resourceType,
-            "overwrite",     true
+            "folder" to folder,
+            "resource_type" to type.resourceType,
+            "overwrite" to true
         )
         if (publicId != null) params["public_id"] = publicId
 
@@ -92,10 +90,8 @@ object CloudinaryHelper {
      * Xóa file khỏi Cloudinary theo publicId.
      */
     fun delete(publicId: String, resourceType: String = "image") {
-        cloudinary.uploader().destroy(
-            publicId,
-            ObjectUtils.asMap("resource_type", resourceType)
-        )
+        val params = mapOf("resource_type" to resourceType)
+        cloudinary.uploader().destroy(publicId, params)
     }
 
     data class UploadResult(
