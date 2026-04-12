@@ -21,6 +21,11 @@ fun Application.configureRouting() {
             categoryRoutes()         // Replaces legacy categoryRoutes()
             inventoryRoutes()        // New feature: batch & inventory management
             orderFulfillmentRoutes() // Enhanced order processing with batch allocation
+            internalOrderRoutes()    // Internal desktop order list/detail/update
+            internalDashboardRoutes() // Internal desktop dashboard summary
+            couponRoutes()           // Internal coupon management/validation
+            posOrderRoutes()         // POS order create and cash confirmation
+            syncRoutes()             // Offline sync push/pull foundation
             prescriptionRoutes()     // Medical prescription management
 
             // Checkout & Payment System
@@ -48,6 +53,7 @@ fun Application.configureRouting() {
             notificationRoutes()
             bannerRoutes()
             healthArticleRoutes()
+            mobileCompatRoutes()
             uploadRoutes()
             adminRoutes()
         }
