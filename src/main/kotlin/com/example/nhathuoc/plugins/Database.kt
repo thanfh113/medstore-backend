@@ -37,10 +37,9 @@ fun Application.configureDatabase() {
             // Core user & authentication tables
             UsersTable,
             RefreshTokensTable,
+            EmployeeProfilesTable,
 
             // Shop & business tables
-            ShopsTable,
-            ShopStaffTable,
             PharmacyBranchesTable,
 
             // Product & category tables
@@ -48,6 +47,7 @@ fun Application.configureDatabase() {
             ProductsTable,
             ProductImagesTable,
             ProductCertificatesTable,
+            ProductDeleteRequestsTable,
             ProductDiseasesTable,
 
             // Order & cart tables

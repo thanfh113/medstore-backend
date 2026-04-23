@@ -1,0 +1,19 @@
+2026-03-15 03:02:59.268 [main] INFO  Application - Autoreload is disabled because the development mode is off.
+2026-03-15 03:03:00.080 [main] INFO  Exposed - Preparing create tables statements took 96ms
+2026-03-15 03:03:00.111 [main] INFO  Exposed - Executing create tables statements took 30ms
+2026-03-15 03:03:00.244 [main] INFO  Exposed - Extracting table columns took 132ms
+2026-03-15 03:03:00.307 [main] INFO  Exposed - Extracting primary keys took 62ms
+2026-03-15 03:03:00.367 [main] INFO  Exposed - Extracting column constraints took 41ms
+2026-03-15 03:03:00.374 [main] INFO  Exposed - Preparing alter table statements took 262ms
+2026-03-15 03:03:06.753 [main] INFO  Exposed - Executing alter table statements took 6379ms
+2026-03-15 03:03:06.911 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-03-15 03:03:06.911 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-03-15 03:03:06.911 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-03-15 03:03:06.911 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-03-15 03:03:06.912 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-03-15 03:03:06.912 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reviews':
+		Unique Index 'uq_review_order_prod' for 'reviews' on columns com.example.nhathuoc.database.tables.ReviewsTable.order_id, com.example.nhathuoc.database.tables.ReviewsTable.product_id
+2026-03-15 03:03:06.913 [main] INFO  Exposed - Checking mapping consistence took 159ms
+2026-03-15 03:03:06.915 [main] INFO  Application - Database connected and tables created.
+2026-03-15 03:03:07.422 [main] INFO  Application - Application started in 8.549 seconds.
+2026-03-15 03:03:07.827 [DefaultDispatcher-worker-1] INFO  Application - Responding at http://127.0.0.1:8080

@@ -1,4 +1,4 @@
-package com.example.nhathuoc.routes
+﻿package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.RefreshTokensTable
 import com.example.nhathuoc.database.tables.RewardAccountsTable
@@ -6,6 +6,7 @@ import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.plugins.BadRequestException
 import com.example.nhathuoc.plugins.ConflictException
 import com.example.nhathuoc.plugins.NotFoundException
+import com.example.nhathuoc.util.EmailHelper
 import com.example.nhathuoc.util.JwtHelper
 import com.example.nhathuoc.util.PasswordHelper
 import io.ktor.http.*
@@ -21,10 +22,11 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.security.MessageDigest
 import java.util.UUID
 import kotlin.time.Duration.Companion.days
 
-// ─── DTOs ────────────────────────────────────────────────────────
+// â”€â”€â”€ DTOs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Serializable
 data class RegisterRequest(
@@ -46,6 +48,12 @@ data class RefreshTokenRequest(
 )
 
 @Serializable
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String
+)
+
+@Serializable
 data class AuthResponse(
     val accessToken: String,
     val refreshToken: String,
@@ -62,26 +70,30 @@ data class UserResponse(
     val avatarUrl: String?
 )
 
-// ─── Utilities ───────────────────────────────────────────────────
+// â”€â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-private fun isValidEmail(email: String): Boolean {
-    val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
-    return emailRegex.matches(email)
+private fun hashRefreshToken(token: String): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(token.toByteArray(Charsets.UTF_8))
+    return digest.joinToString("") { "%02x".format(it) }
 }
 
-// ─── Routes ──────────────────────────────────────────────────────
+// â”€â”€â”€ Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 fun Route.authRoutes() {
     route("/auth") {
 
         // POST /api/v1/auth/register
         post("/register") {
-            val req = call.receive<RegisterRequest>()
+            val rawReq = call.receive<RegisterRequest>()
+            val req = rawReq.copy(
+                phone = rawReq.phone.trim(),
+                email = EmailHelper.normalize(rawReq.email) ?: ""
+            )
 
             if (req.phone.isBlank() || req.email.isBlank() || req.password.isBlank())
                 throw BadRequestException("Số điện thoại, email và mật khẩu không được để trống")
-            if (!isValidEmail(req.email))
-                throw BadRequestException("Email không hợp lệ. Vui lòng sử dụng định dạng @domain.com")
+            if (!EmailHelper.isValid(req.email))
+                throw BadRequestException("Email không hợp lệ. Ví dụ: ten@example.com")
             if (req.password.length < 6)
                 throw BadRequestException("Mật khẩu phải có ít nhất 6 ký tự")
 
@@ -97,6 +109,7 @@ fun Route.authRoutes() {
 
             val userId       = UUID.randomUUID().toString()
             val hashedPwd    = PasswordHelper.hash(req.password)
+            val refreshToken = JwtHelper.generateRefreshToken(userId)
             val expiresAt    = Clock.System.now().plus(7.days)
                 .toLocalDateTime(TimeZone.UTC)
 
@@ -116,7 +129,8 @@ fun Route.authRoutes() {
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()
                     it[RefreshTokensTable.userId]    = userId
-                    it[RefreshTokensTable.token]     = JwtHelper.generateRefreshToken(userId)
+                    it[RefreshTokensTable.token]     = ""
+                    it[RefreshTokensTable.tokenHash] = hashRefreshToken(refreshToken)
                     it[RefreshTokensTable.expiresAt] = expiresAt
                 }
             }
@@ -125,7 +139,7 @@ fun Route.authRoutes() {
                 HttpStatusCode.Created,
                 AuthResponse(
                     accessToken  = JwtHelper.generateAccessToken(userId, "USER"),
-                    refreshToken = JwtHelper.generateRefreshToken(userId),
+                    refreshToken = refreshToken,
                     user = UserResponse(
                         id        = userId,
                         phone     = req.phone,
@@ -140,21 +154,27 @@ fun Route.authRoutes() {
 
         // POST /api/v1/auth/login
         post("/login") {
-            val req = call.receive<LoginRequest>()
+            val rawReq = call.receive<LoginRequest>()
+            val req = rawReq.copy(credential = rawReq.credential.trim())
+            call.application.environment.log.info("Desktop/Auth login attempt: credential={}", req.credential)
 
             val user = transaction {
                 UsersTable.selectAll()
-                    .where { (UsersTable.email eq req.credential) or (UsersTable.phone eq req.credential) }
+                    .where {
+                        ((UsersTable.email eq req.credential) or (UsersTable.phone eq req.credential)) and
+                            UsersTable.deletedAt.isNull()
+                    }
                     .firstOrNull()
             } ?: throw NotFoundException("Tài khoản không tồn tại")
 
             if (!PasswordHelper.verify(req.password, user[UsersTable.password]))
                 throw BadRequestException("Mật khẩu không chính xác")
             if (!user[UsersTable.isActive])
-                throw BadRequestException("Tài khoản đã bị khoá. Vui lòng liên hệ hỗ trợ")
+                throw BadRequestException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ")
 
             val userId    = user[UsersTable.id]
             val role      = user[UsersTable.role]
+            call.application.environment.log.info("Desktop/Auth login success: userId={}, role={}", userId, role)
             val expiresAt = Clock.System.now().plus(7.days).toLocalDateTime(TimeZone.UTC)
             val newRefresh = JwtHelper.generateRefreshToken(userId)
 
@@ -163,7 +183,8 @@ fun Route.authRoutes() {
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()
                     it[RefreshTokensTable.userId]    = userId
-                    it[RefreshTokensTable.token]     = newRefresh
+                    it[RefreshTokensTable.token]     = ""
+                    it[RefreshTokensTable.tokenHash] = hashRefreshToken(newRefresh)
                     it[RefreshTokensTable.expiresAt] = expiresAt
                 }
             }
@@ -187,28 +208,69 @@ fun Route.authRoutes() {
         // POST /api/v1/auth/refresh
         post("/refresh") {
             val req = call.receive<RefreshTokenRequest>()
+            val decoded = try {
+                JwtHelper.verifyRefreshToken(req.refreshToken)
+            } catch (e: Exception) {
+                throw BadRequestException("Refresh token không hợp lệ")
+            }
+
+            if (decoded.getClaim("type").asString() != "refresh") {
+                throw BadRequestException("Token không phải refresh token")
+            }
+
+            val tokenUserId = decoded.getClaim("userId").asString()
+                ?: throw BadRequestException("Refresh token thiếu userId")
+            val hashedToken = hashRefreshToken(req.refreshToken)
+            val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
 
             val tokenRow = transaction {
                 RefreshTokensTable.selectAll()
-                    .where { RefreshTokensTable.token eq req.refreshToken }
+                    .where {
+                        (RefreshTokensTable.tokenHash eq hashedToken) or
+                        (RefreshTokensTable.token eq hashedToken) or
+                        (RefreshTokensTable.token eq req.refreshToken)
+                    }
                     .firstOrNull()
-            } ?: throw BadRequestException("Refresh token không hợp lệ")
+            } ?: throw BadRequestException("Refresh token khĂ´ng há»£p lá»‡")
 
             val userId  = tokenRow[RefreshTokensTable.userId]
-            val user    = transaction {
-                UsersTable.selectAll().where { UsersTable.id eq userId }.firstOrNull()
+            if (userId != tokenUserId) {
+                throw BadRequestException("Refresh token không hợp lệ")
+            }
+            if (tokenRow[RefreshTokensTable.expiresAt] <= now) {
+                transaction {
+                    RefreshTokensTable.update({ RefreshTokensTable.id eq tokenRow[RefreshTokensTable.id] }) {
+                        it[RefreshTokensTable.revokedAt] = now
+                    }
+                }
+                throw BadRequestException("Refresh token đã hết hạn")
+            }
+            if (tokenRow[RefreshTokensTable.revokedAt] != null) {
+                throw BadRequestException("Refresh token đã bị thu hồi")
+            }
+            val user = transaction {
+                UsersTable.selectAll()
+                    .where { (UsersTable.id eq userId) and UsersTable.deletedAt.isNull() }
+                    .firstOrNull()
             } ?: throw NotFoundException("Người dùng không tồn tại")
+
+            if (!user[UsersTable.isActive]) {
+                throw BadRequestException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ")
+            }
 
             val role       = user[UsersTable.role]
             val newRefresh = JwtHelper.generateRefreshToken(userId)
             val expiresAt  = Clock.System.now().plus(7.days).toLocalDateTime(TimeZone.UTC)
 
             transaction {
-                RefreshTokensTable.deleteWhere { RefreshTokensTable.userId eq userId }
+                RefreshTokensTable.update({ RefreshTokensTable.userId eq userId }) {
+                    it[RefreshTokensTable.revokedAt] = now
+                }
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()
                     it[RefreshTokensTable.userId]    = userId
-                    it[RefreshTokensTable.token]     = newRefresh
+                    it[RefreshTokensTable.token]     = ""
+                    it[RefreshTokensTable.tokenHash] = hashRefreshToken(newRefresh)
                     it[RefreshTokensTable.expiresAt] = expiresAt
                 }
             }
@@ -223,14 +285,64 @@ fun Route.authRoutes() {
 
         // POST /api/v1/auth/logout
         authenticate("auth-jwt") {
+            post("/change-password") {
+                val principal = call.principal<JWTPrincipal>()
+                    ?: throw BadRequestException("Unauthorized")
+                val userId = principal.payload.getClaim("userId").asString()
+                    ?: throw BadRequestException("Invalid token")
+                val request = call.receive<ChangePasswordRequest>()
+
+                if (request.currentPassword.isBlank() || request.newPassword.isBlank()) {
+                    throw BadRequestException("Mật khẩu hiện tại và mật khẩu mới không được để trống")
+                }
+                if (request.newPassword.length < 6) {
+                    throw BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự")
+                }
+
+                val user = transaction {
+                    UsersTable.selectAll()
+                        .where { UsersTable.id eq userId }
+                        .firstOrNull()
+                } ?: throw NotFoundException("Người dùng không tồn tại")
+
+                if (!PasswordHelper.verify(request.currentPassword, user[UsersTable.password])) {
+                    throw BadRequestException("Mật khẩu hiện tại không chính xác")
+                }
+                if (PasswordHelper.verify(request.newPassword, user[UsersTable.password])) {
+                    throw BadRequestException("Mật khẩu mới không được trùng mật khẩu hiện tại")
+                }
+
+                val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                transaction {
+                    UsersTable.update({ UsersTable.id eq userId }) {
+                        it[password] = PasswordHelper.hash(request.newPassword)
+                        it[updatedAt] = now
+                    }
+                    RefreshTokensTable.update({ RefreshTokensTable.userId eq userId }) {
+                        it[revokedAt] = now
+                    }
+                }
+                call.application.environment.log.info("Desktop/Auth password changed: userId={}", userId)
+
+                call.respond(
+                    mapOf(
+                        "message" to "Đổi mật khẩu thành công. Vui lòng đăng nhập lại."
+                    )
+                )
+            }
+
             post("/logout") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId    = principal?.payload?.getClaim("userId")?.asString() ?: return@post
+                val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
                 transaction {
-                    RefreshTokensTable.deleteWhere { RefreshTokensTable.userId eq userId }
+                    RefreshTokensTable.update({ RefreshTokensTable.userId eq userId }) {
+                        it[RefreshTokensTable.revokedAt] = now
+                    }
                 }
                 call.respond(mapOf("message" to "Đăng xuất thành công"))
             }
         }
     }
 }
+

@@ -1,0 +1,113 @@
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if "Windows_NT" == "Windows_NT" setlocal
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set DIRNAME=D:\ÐATN\nhathuoc\nhathuoc-backend\ 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if "D:\ÐATN\nhathuoc\nhathuoc-backend\" == "" set DIRNAME=. 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set APP_BASE_NAME=gradlew 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set APP_HOME=D:\ÐATN\nhathuoc\nhathuoc-backend\ 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>for %i in ("D:\ÐATN\nhathuoc\nhathuoc-backend\") do set APP_HOME=%~fi 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set APP_HOME=D:\ÐATN\nhathuoc\nhathuoc-backend\ 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m" 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if defined JAVA_HOME goto findJavaFromJavaHome 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.3.9-hotspot 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set JAVA_EXE=C:\Program Files\Eclipse Adoptium\jdk-21.0.3.9-hotspot/bin/java.exe 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.3.9-hotspot/bin/java.exe" goto execute 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set CLASSPATH= 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>"C:\Program Files\Eclipse Adoptium\jdk-21.0.3.9-hotspot/bin/java.exe" "-Xmx64m" "-Xms64m"   "-Dorg.gradle.appname=gradlew" -classpath "" -jar "D:\ÐATN\nhathuoc\nhathuoc-backend\\gradle\wrapper\gradle-wrapper.jar" run 
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :compileKotlin UP-TO-DATE
+> Task :compileJava NO-SOURCE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+
+> Task :run
+00:50:27.374 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+00:50:27.611 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+00:50:28.401 [main] INFO  Exposed - Preparing create tables statements took 113ms
+00:50:28.561 [main] INFO  Exposed - Executing create tables statements took 160ms
+00:50:28.755 [main] INFO  Exposed - Extracting table columns took 194ms
+00:50:28.855 [main] INFO  Exposed - Extracting primary keys took 99ms
+00:50:28.892 [main] INFO  Exposed - Extracting column constraints took 24ms
+00:50:28.893 [main] INFO  Exposed - Preparing alter table statements took 332ms
+00:50:30.047 [main] INFO  Exposed - Executing alter table statements took 1153ms
+00:50:30.289 [main] WARN  Exposed - List of excessive indices:
+00:50:30.290 [main] WARN  Exposed - 			'chat_sessions'.'' -> idx_chat_sessions_type, fk_chat_sessions_consultant__id
+00:50:30.290 [main] INFO  Exposed - SQL Queries to remove excessive indices:
+00:50:30.290 [main] INFO  Exposed - 			[ALTER TABLE chat_sessions DROP INDEX idx_chat_sessions_type];
+00:50:30.301 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+00:50:30.302 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+00:50:30.303 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+00:50:30.303 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+00:50:30.303 [main] INFO  Exposed - Index on table 'product_delete_requests' differs only in name: in db idx_product_delete_requests_status -> in mapping product_delete_requests_status
+00:50:30.303 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+00:50:30.304 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+00:50:30.305 [main] INFO  Exposed - Index on table 'expense_categories' differs only in name: in db uq_expense_categories_code -> in mapping expense_categories_code_unique
+00:50:30.305 [main] INFO  Exposed - Index on table 'category_attributes' differs only in name: in db uq_cat_attr_key -> in mapping category_attributes_category_id_attr_key_unique
+00:50:30.306 [main] INFO  Exposed - Index on table 'product_attribute_values' differs only in name: in db uq_prod_attr -> in mapping product_attribute_values_product_id_attribute_id_unique
+00:50:30.307 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+		Index 'fk_payments_payment_method_id__id' for 'payments' on columns 
+00:50:30.307 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'chat_messages':
+		Index 'idx_messages_sender_type' for 'chat_messages' on columns 
+00:50:30.307 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'chat_sessions':
+		Index 'fk_chat_sessions_consultant__id' for 'chat_sessions' on columns 
+		Index 'idx_chat_sessions_type' for 'chat_sessions' on columns 
+00:50:30.308 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+00:50:30.308 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payment_methods':
+		Index 'idx_payment_methods_type' for 'payment_methods' on columns com.example.nhathuoc.database.tables.PaymentMethodsTable.type
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reviews':
+		Unique Index 'uq_review_order_prod' for 'reviews' on columns com.example.nhathuoc.database.tables.ReviewsTable.order_id, com.example.nhathuoc.database.tables.ReviewsTable.product_id
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'health_articles':
+		Index 'idx_health_created_at' for 'health_articles' on columns com.example.nhathuoc.database.tables.HealthArticlesTable.created_at
+		Index 'idx_health_published' for 'health_articles' on columns com.example.nhathuoc.database.tables.HealthArticlesTable.is_published
+		Index 'idx_health_category' for 'health_articles' on columns com.example.nhathuoc.database.tables.HealthArticlesTable.category
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'product_batches':
+		Index 'idx_batches_expiry' for 'product_batches' on columns com.example.nhathuoc.database.tables.ProductBatchesTable.exp_date
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+00:50:30.309 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'expenses':
+		Index 'idx_expenses_status' for 'expenses' on columns com.example.nhathuoc.database.tables.ExpensesTable.status
+00:50:30.311 [main] INFO  Exposed - Checking mapping consistence took 264ms
+00:50:30.371 [main] INFO  Application - Database connected and tables created.
+00:50:31.188 [main] INFO  Application - Application started in 4.335 seconds.
+00:50:31.739 [main] INFO  Application - Responding at http://127.0.0.1:8080
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if -1 EQU 0 goto mainEnd 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>rem the _cmd.exe /c_ return code! 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>set EXIT_CODE=-1 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if -1 EQU 0 set EXIT_CODE=1 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>if not "" == "" exit -1 
+
+D:\ÐATN\nhathuoc\nhathuoc-backend>exit /b -1 

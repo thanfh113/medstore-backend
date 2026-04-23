@@ -7,15 +7,22 @@ ktor:
     host: 0.0.0.0
 
 jwt:
-  secret: "nhathuoc-super-secret-key-change-in-production"
-  issuer: "nhathuoc-backend"
-  audience: "nhathuoc-clients"
-  access_token_expiry: 900000      # 15 minutes in ms
-  refresh_token_expiry: 604800000  # 7 days in ms
+  secret: "CHANGE_ME_USE_ENV"
+  issuer: "medstore-backend"
+  audience: "medstore-clients"
+  access_token_expiry: 86400000    # 24 hours in ms (từ 15 min)
+  refresh_token_expiry: 2592000000 # 30 days in ms (từ 7 days)
 
 database:
-  url: "jdbc:mysql://localhost:3306/nhathuoc_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true"
+  url: "jdbc:mysql://localhost:3306/medical_supplies_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4&useUnicode=true"
   driver: "com.mysql.cj.jdbc.Driver"
   user: "root"
-  password: "123456"
+  password: "CHANGE_ME_USE_ENV"
   max_pool_size: 10
+
+cloudinary:
+  cloud_name: "Root"   # ← Điền vào sau khi tạo tài khoản Cloudinary
+  api_key:    "CHANGE_ME_USE_ENV"
+  api_secret: "CHANGE_ME_USE_ENV"
+  # Folder gốc trong Cloudinary
+  folder_prefix: "medstore"

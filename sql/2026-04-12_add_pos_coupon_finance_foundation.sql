@@ -1,21 +1,111 @@
 -- Foundation for Desktop POS + Finance dashboard + Order-level coupons
--- Safe to run multiple times on MySQL 8.x (uses IF NOT EXISTS clauses)
+-- Safe to run multiple times on MySQL, including versions that do not support
+-- ALTER TABLE ... ADD COLUMN/INDEX IF NOT EXISTS.
+
+SET @schema_name = DATABASE();
 
 -- 1) Orders: support POS channel, walk-in customer (user_id nullable), cashier tracking, cash settlement
 ALTER TABLE orders
     MODIFY COLUMN user_id VARCHAR(36) NULL;
 
-ALTER TABLE orders
-    ADD COLUMN IF NOT EXISTS order_channel VARCHAR(20) NOT NULL DEFAULT 'ONLINE' COMMENT 'ONLINE|POS' AFTER shop_id,
-    ADD COLUMN IF NOT EXISTS cashier_user_id VARCHAR(36) NULL COMMENT 'Nhan vien tao don POS' AFTER branch_id,
-    ADD COLUMN IF NOT EXISTS completed_at DATETIME NULL AFTER updated_at,
-    ADD COLUMN IF NOT EXISTS cash_received DECIMAL(12,2) NULL COMMENT 'Tien khach dua (POS cash)' AFTER total,
-    ADD COLUMN IF NOT EXISTS cash_change DECIMAL(12,2) NULL COMMENT 'Tien thoi lai (POS cash)' AFTER cash_received;
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND column_name = 'order_channel'
+        ),
+        'SELECT ''orders.order_channel exists''',
+        'ALTER TABLE orders ADD COLUMN order_channel VARCHAR(20) NOT NULL DEFAULT ''ONLINE'' COMMENT ''ONLINE|POS'' AFTER shop_id'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-ALTER TABLE orders
-    ADD INDEX IF NOT EXISTS idx_orders_channel (order_channel),
-    ADD INDEX IF NOT EXISTS idx_orders_cashier (cashier_user_id),
-    ADD CONSTRAINT fk_orders_cashier_user_id__id FOREIGN KEY (cashier_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND column_name = 'cashier_user_id'
+        ),
+        'SELECT ''orders.cashier_user_id exists''',
+        'ALTER TABLE orders ADD COLUMN cashier_user_id VARCHAR(36) NULL COMMENT ''Nhan vien tao don POS'' AFTER branch_id'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND column_name = 'completed_at'
+        ),
+        'SELECT ''orders.completed_at exists''',
+        'ALTER TABLE orders ADD COLUMN completed_at DATETIME NULL AFTER updated_at'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND column_name = 'cash_received'
+        ),
+        'SELECT ''orders.cash_received exists''',
+        'ALTER TABLE orders ADD COLUMN cash_received DECIMAL(12,2) NULL COMMENT ''Tien khach dua (POS cash)'' AFTER total'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND column_name = 'cash_change'
+        ),
+        'SELECT ''orders.cash_change exists''',
+        'ALTER TABLE orders ADD COLUMN cash_change DECIMAL(12,2) NULL COMMENT ''Tien thoi lai (POS cash)'' AFTER cash_received'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND index_name = 'idx_orders_channel'
+        ),
+        'SELECT ''orders.idx_orders_channel exists''',
+        'ALTER TABLE orders ADD INDEX idx_orders_channel (order_channel)'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND index_name = 'idx_orders_cashier'
+        ),
+        'SELECT ''orders.idx_orders_cashier exists''',
+        'ALTER TABLE orders ADD INDEX idx_orders_cashier (cashier_user_id)'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = @schema_name
+              AND table_name = 'orders'
+              AND constraint_type = 'FOREIGN KEY'
+              AND constraint_name = 'fk_orders_cashier_user_id__id'
+        ),
+        'SELECT ''orders.fk_orders_cashier_user_id__id exists''',
+        'ALTER TABLE orders ADD CONSTRAINT fk_orders_cashier_user_id__id FOREIGN KEY (cashier_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE RESTRICT'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 2) Coupons: order-level only (phase 1)
 CREATE TABLE IF NOT EXISTS coupons (
@@ -46,10 +136,44 @@ CREATE TABLE IF NOT EXISTS coupons (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- one coupon per order (phase 1)
-ALTER TABLE orders
-    ADD COLUMN IF NOT EXISTS coupon_id VARCHAR(36) NULL AFTER discount,
-    ADD INDEX IF NOT EXISTS idx_orders_coupon_id (coupon_id),
-    ADD CONSTRAINT fk_orders_coupon_id__id FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND column_name = 'coupon_id'
+        ),
+        'SELECT ''orders.coupon_id exists''',
+        'ALTER TABLE orders ADD COLUMN coupon_id VARCHAR(36) NULL AFTER discount'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = @schema_name AND table_name = 'orders' AND index_name = 'idx_orders_coupon_id'
+        ),
+        'SELECT ''orders.idx_orders_coupon_id exists''',
+        'ALTER TABLE orders ADD INDEX idx_orders_coupon_id (coupon_id)'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(
+        EXISTS(
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = @schema_name
+              AND table_name = 'orders'
+              AND constraint_type = 'FOREIGN KEY'
+              AND constraint_name = 'fk_orders_coupon_id__id'
+        ),
+        'SELECT ''orders.fk_orders_coupon_id__id exists''',
+        'ALTER TABLE orders ADD CONSTRAINT fk_orders_coupon_id__id FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE RESTRICT ON UPDATE RESTRICT'
+    )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS coupon_redemptions (
     id VARCHAR(36) NOT NULL,

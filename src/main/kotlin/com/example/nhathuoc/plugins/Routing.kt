@@ -18,6 +18,7 @@ fun Application.configureRouting() {
 
             // Enhanced routes with full business logic
             productRoutes()          // Replaces legacy productRoutes()
+            productDesktopCompatRoutes() // Desktop stepper compatibility endpoints
             categoryRoutes()         // Replaces legacy categoryRoutes()
             inventoryRoutes()        // New feature: batch & inventory management
             orderFulfillmentRoutes() // Enhanced order processing with batch allocation
@@ -49,6 +50,8 @@ fun Application.configureRouting() {
             cartRoutes()
             rewardRoutes()
             chatRoutes()
+            internalChatRoutes()
+            settingsRoutes()
             pharmacyRoutes()
             notificationRoutes()
             bannerRoutes()

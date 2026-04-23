@@ -9,23 +9,55 @@ fun Application.configureRouting() {
     routing {
         // Health check
         get("/") {
-            call.respond(mapOf("status" to "ok", "message" to "Nhà Thuốc API đang hoạt động"))
+            call.respond(mapOf("status" to "ok", "message" to "Medical Supply API is running"))
         }
 
         route("/api/v1") {
             authRoutes()
             userRoutes()
-            productRoutes()
-            categoryRoutes()
+
+            // Enhanced routes with full business logic
+            productRoutes()          // Replaces legacy productRoutes()
+            productDesktopCompatRoutes() // Desktop stepper compatibility endpoints
+            categoryRoutes()         // Replaces legacy categoryRoutes()
+            inventoryRoutes()        // New feature: batch & inventory management
+            orderFulfillmentRoutes() // Enhanced order processing with batch allocation
+            internalOrderRoutes()    // Internal desktop order list/detail/update
+            internalDashboardRoutes() // Internal desktop dashboard summary
+            couponRoutes()           // Internal coupon management/validation
+            posOrderRoutes()         // POS order create and cash confirmation
+            syncRoutes()             // Offline sync push/pull foundation
+            prescriptionRoutes()     // Medical prescription management
+
+            // Checkout & Payment System
+            checkoutRoutes()         // Checkout flow (preview + create order)
+            paymentRoutes()          // Payment processing (VNPay, MoMo, COD) + webhooks
+
+            // Medical Consultation System (⚠️ TIER 3 - INCOMPLETE)
+            // doctorRoutes()        // Disabled - Service has ORM compatibility issues
+            // consultationRoutes()  // Disabled - Service has ORM compatibility issues
+
+
+            // Legacy routes (TODO: remove after frontend migration)
+            // These are deprecated placeholder implementations
+            route("/legacy") {
+                productRoutesLegacy()
+                categoryRoutesLegacy()
+                orderRoutesLegacy()
+            }
+
+            // Other existing routes (TODO: migrate these to enhanced versions)
             cartRoutes()
-            orderRoutes()
             rewardRoutes()
-            vaccineRoutes()
             chatRoutes()
+            internalChatRoutes()
+            settingsRoutes()
             pharmacyRoutes()
             notificationRoutes()
             bannerRoutes()
             healthArticleRoutes()
+            mobileCompatRoutes()
+            uploadRoutes()
             adminRoutes()
         }
     }
