@@ -183,7 +183,6 @@ class AdminDeleteRequestReviewRegressionTest {
                 it[discountPct] = 0
                 it[rewardPoints] = 0
                 it[stock] = 10
-                it[productType] = "MEDICAL_SUPPLY"
                 it[registrationNumber] = null
                 it[riskClassification] = "A"
                 it[requiresCertification] = false
@@ -198,7 +197,6 @@ class AdminDeleteRequestReviewRegressionTest {
 
             ProductDeleteRequestsTable.insert {
                 it[ProductDeleteRequestsTable.id] = requestId
-                it[ProductDeleteRequestsTable.shopId] = SHOP_ID
                 it[ProductDeleteRequestsTable.productId] = productId
                 it[ProductDeleteRequestsTable.requestedByUserId] = EMPLOYEE_USER_ID
                 it[ProductDeleteRequestsTable.reason] = "Regression test"

@@ -105,9 +105,14 @@ data class ProductCertificateInput(
     val type: String,
     val name: String,
     val fileUrl: String,
+    val fileType: String = "IMAGE",
+    val publicId: String? = null,
+    val resourceType: String = "image",
+    val thumbnailUrl: String? = null,
     val issueDate: String? = null,
     val expireDate: String? = null,
-    val issuer: String? = null
+    val issuer: String? = null,
+    val isActive: Boolean = true
 )
 
 data class ProductCertificateDto(
@@ -115,18 +120,28 @@ data class ProductCertificateDto(
     val type: String,
     val name: String,
     val fileUrl: String,
+    val fileType: String,
+    val publicId: String?,
+    val resourceType: String,
+    val thumbnailUrl: String?,
     val issueDate: String?,
     val expireDate: String?,
-    val issuer: String?
+    val issuer: String?,
+    val isActive: Boolean
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "id" to id,
         "type" to type,
         "name" to name,
         "fileUrl" to fileUrl,
+        "fileType" to fileType,
+        "publicId" to publicId,
+        "resourceType" to resourceType,
+        "thumbnailUrl" to thumbnailUrl,
         "issueDate" to issueDate,
         "expireDate" to expireDate,
-        "issuer" to issuer
+        "issuer" to issuer,
+        "isActive" to isActive
     )
 }
 
@@ -226,6 +241,7 @@ class ProductService(
     fun getProducts(
         shopId: String? = null,
         categoryId: String? = null,
+        categoryIds: List<String>? = null,
         brand: String? = null,
         minPrice: BigDecimal? = null,
         maxPrice: BigDecimal? = null,
@@ -240,6 +256,9 @@ class ProductService(
             // Apply filters
             if (categoryId != null) {
                 query = query.andWhere { ProductsTable.categoryId eq categoryId }
+            }
+            if (!categoryIds.isNullOrEmpty()) {
+                query = query.andWhere { ProductsTable.categoryId inList categoryIds }
             }
             if (brand != null) {
                 query = query.andWhere { ProductsTable.brand eq brand }
@@ -793,9 +812,14 @@ class ProductService(
                     type = row[ProductCertificatesTable.type],
                     name = row[ProductCertificatesTable.name],
                     fileUrl = row[ProductCertificatesTable.fileUrl],
+                    fileType = row[ProductCertificatesTable.fileType],
+                    publicId = row[ProductCertificatesTable.cloudinaryPublicId],
+                    resourceType = row[ProductCertificatesTable.cloudinaryResourceType],
+                    thumbnailUrl = row[ProductCertificatesTable.thumbnailUrl],
                     issueDate = row[ProductCertificatesTable.issueDate],
                     expireDate = row[ProductCertificatesTable.expireDate],
-                    issuer = row[ProductCertificatesTable.issuer]
+                    issuer = row[ProductCertificatesTable.issuer],
+                    isActive = row[ProductCertificatesTable.isActive]
                 )
             }
     }
@@ -895,11 +919,37 @@ class ProductService(
                     it[ProductCertificatesTable.type] = certificate.type.ifBlank { "MOH_LICENSE" }
                     it[ProductCertificatesTable.name] = certificate.name
                     it[ProductCertificatesTable.fileUrl] = certificate.fileUrl
+                    it[ProductCertificatesTable.fileType] = certificate.fileType.ifBlank { detectFileType(certificate.fileUrl) }
+                    it[ProductCertificatesTable.cloudinaryPublicId] = certificate.publicId?.ifBlank { null }
+                    it[ProductCertificatesTable.cloudinaryResourceType] =
+                        certificate.resourceType.ifBlank { detectResourceType(certificate.fileUrl) }
+                    it[ProductCertificatesTable.thumbnailUrl] = certificate.thumbnailUrl?.ifBlank { null }
                     it[ProductCertificatesTable.issueDate] = certificate.issueDate?.ifBlank { null }
                     it[ProductCertificatesTable.expireDate] = certificate.expireDate?.ifBlank { null }
                     it[ProductCertificatesTable.issuer] = certificate.issuer?.ifBlank { null }
+                    it[ProductCertificatesTable.isActive] = certificate.isActive
                 }
             }
+    }
+
+    private fun detectFileType(url: String): String {
+        val normalized = url.substringBefore("?").lowercase()
+        return when {
+            normalized.endsWith(".pdf") -> "PDF"
+            normalized.endsWith(".png") || normalized.endsWith(".jpg") ||
+                normalized.endsWith(".jpeg") || normalized.endsWith(".webp") ||
+                normalized.endsWith(".gif") || normalized.endsWith(".heic") -> "IMAGE"
+            else -> "OTHER"
+        }
+    }
+
+    private fun detectResourceType(url: String): String {
+        return when {
+            url.contains("/raw/upload/") -> "raw"
+            url.substringBefore("?").lowercase().endsWith(".pdf") -> "raw"
+            url.contains("/video/upload/") -> "video"
+            else -> "image"
+        }
     }
 
     private fun safeDeleteCloudinaryAsset(publicId: String) {

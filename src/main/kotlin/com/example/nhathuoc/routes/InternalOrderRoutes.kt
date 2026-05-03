@@ -10,6 +10,7 @@ import com.example.nhathuoc.database.tables.PaymentsTable
 import com.example.nhathuoc.database.tables.ProductAttributeValuesTable
 import com.example.nhathuoc.database.tables.ProductImagesTable
 import com.example.nhathuoc.database.tables.ProductsTable
+import com.example.nhathuoc.database.tables.RewardRedemptionsTable
 import com.example.nhathuoc.database.tables.UserAddressesTable
 import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.util.requireInternalAccess
@@ -441,6 +442,16 @@ fun Route.internalOrderRoutes() {
                                         it[usedCount] = maxOf(0, coupon[CouponsTable.usedCount] - 1)
                                     }
                                 }
+                        }
+
+                        RewardRedemptionsTable.update({
+                            (RewardRedemptionsTable.redeemedOrderId eq orderId) and
+                                (RewardRedemptionsTable.status eq "USED")
+                        }) {
+                            it[status] = "APPROVED"
+                            it[redeemedOrderId] = null
+                            it[voucherUsedAt] = null
+                            it[updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
                         }
                     }
 

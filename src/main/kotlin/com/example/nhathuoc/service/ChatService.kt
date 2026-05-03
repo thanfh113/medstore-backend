@@ -66,6 +66,7 @@ data class ChatSessionDetailDto(
 )
 
 class ChatService {
+    private val notificationService = NotificationService()
 
     fun createOrResumeSession(userId: String, productId: String? = null): ChatSessionDto {
         return transaction {
@@ -199,6 +200,16 @@ class ChatService {
                 ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
                     it[status] = SESSION_STATUS_ASSIGNED
                 }
+            }
+
+            if (senderRole in AppRoles.internalRoles && session[ChatSessionsTable.userId] != senderId) {
+                notificationService.createUserNotification(
+                    userId = session[ChatSessionsTable.userId],
+                    title = "Tư vấn viên đã trả lời",
+                    body = content.trim().take(160),
+                    type = "CHAT",
+                    refId = sessionId
+                )
             }
 
             baseMessageQuery()

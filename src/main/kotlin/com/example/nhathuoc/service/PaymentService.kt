@@ -1629,19 +1629,35 @@ class PaymentService {
             return
         }
 
-        RewardAccountsTable.update({ RewardAccountsTable.userId eq orderUserId }) {
-            with(org.jetbrains.exposed.sql.SqlExpressionBuilder) {
-                it[RewardAccountsTable.totalPoints] = RewardAccountsTable.totalPoints + pointsEarned
+        val rewardAccount = RewardAccountsTable
+            .selectAll()
+            .where { RewardAccountsTable.userId eq orderUserId }
+            .singleOrNull()
+
+        if (rewardAccount == null) {
+            RewardAccountsTable.insert {
+                it[RewardAccountsTable.id] = UUID.randomUUID().toString()
+                it[RewardAccountsTable.userId] = orderUserId
+                it[RewardAccountsTable.totalPoints] = pointsEarned
+                it[RewardAccountsTable.usedPoints] = 0
+            }
+        } else {
+            RewardAccountsTable.update({ RewardAccountsTable.userId eq orderUserId }) {
+                with(org.jetbrains.exposed.sql.SqlExpressionBuilder) {
+                    it[RewardAccountsTable.totalPoints] = RewardAccountsTable.totalPoints + pointsEarned
+                }
             }
         }
 
         RewardTransactionsTable.insert {
-            it[id] = UUID.randomUUID().toString()
-            it[userId] = orderUserId
+            it[RewardTransactionsTable.id] = UUID.randomUUID().toString()
+            it[RewardTransactionsTable.userId] = orderUserId
             it[RewardTransactionsTable.orderId] = orderId
-            it[type] = "EARN"
-            it[points] = pointsEarned
-            it[description] = "Thanh toan thanh cong don hang ${order[OrdersTable.orderCode]}"
+            it[RewardTransactionsTable.refType] = "ORDER"
+            it[RewardTransactionsTable.refId] = orderId
+            it[RewardTransactionsTable.type] = "EARN"
+            it[RewardTransactionsTable.points] = pointsEarned
+            it[RewardTransactionsTable.description] = "Thanh toán thành công đơn hàng ${order[OrdersTable.orderCode]}"
         }
     }
 

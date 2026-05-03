@@ -49,6 +49,8 @@ fun Application.configureRouting() {
             // Other existing routes (TODO: migrate these to enhanced versions)
             cartRoutes()
             rewardRoutes()
+            reviewRoutes()
+            complaintRoutes()
             chatRoutes()
             internalChatRoutes()
             settingsRoutes()

@@ -12,15 +12,18 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.update
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
@@ -36,7 +39,8 @@ private data class CouponCreateRequest(
     val maxDiscountAmount: Double? = null,
     val usageLimit: Int? = null,
     val usagePerUserLimit: Int? = null,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val isRewardVoucherTemplate: Boolean = false
 )
 
 @Serializable
@@ -51,6 +55,7 @@ private data class CouponDto(
     val id: String,
     val code: String,
     val name: String,
+    val description: String? = null,
     val discountType: String,
     val discountValue: Double,
     val minOrderTotal: Double? = null,
@@ -58,7 +63,8 @@ private data class CouponDto(
     val usageLimit: Int? = null,
     val usagePerUserLimit: Int? = null,
     val usedCount: Int,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val isRewardVoucherTemplate: Boolean = false
 )
 
 @Serializable
@@ -79,6 +85,24 @@ private data class CouponEnvelope<T>(
     val data: T,
     val message: String
 )
+
+private fun couponDtoFromRow(row: ResultRow): CouponDto {
+    return CouponDto(
+        id = row[CouponsTable.id],
+        code = row[CouponsTable.code],
+        name = row[CouponsTable.name],
+        description = row[CouponsTable.description],
+        discountType = row[CouponsTable.discountType],
+        discountValue = row[CouponsTable.discountValue].toDouble(),
+        minOrderTotal = row[CouponsTable.minOrderTotal]?.toDouble(),
+        maxDiscountAmount = row[CouponsTable.maxDiscountAmount]?.toDouble(),
+        usageLimit = row[CouponsTable.usageLimit],
+        usagePerUserLimit = row[CouponsTable.usagePerUserLimit],
+        usedCount = row[CouponsTable.usedCount],
+        isActive = row[CouponsTable.isActive],
+        isRewardVoucherTemplate = row[CouponsTable.isRewardVoucherTemplate]
+    )
+}
 
 internal data class CouponComputation(
     val couponId: String,
@@ -104,21 +128,7 @@ fun Route.couponRoutes() {
                     CouponsTable
                         .selectAll()
                         .orderBy(CouponsTable.createdAt to SortOrder.DESC)
-                        .map { row ->
-                            CouponDto(
-                                id = row[CouponsTable.id],
-                                code = row[CouponsTable.code],
-                                name = row[CouponsTable.name],
-                                discountType = row[CouponsTable.discountType],
-                                discountValue = row[CouponsTable.discountValue].toDouble(),
-                                minOrderTotal = row[CouponsTable.minOrderTotal]?.toDouble(),
-                                maxDiscountAmount = row[CouponsTable.maxDiscountAmount]?.toDouble(),
-                                usageLimit = row[CouponsTable.usageLimit],
-                                usagePerUserLimit = row[CouponsTable.usagePerUserLimit],
-                                usedCount = row[CouponsTable.usedCount],
-                                isActive = row[CouponsTable.isActive]
-                            )
-                        }
+                        .map(::couponDtoFromRow)
                 }
                 call.respond(
                     CouponEnvelope(
@@ -172,6 +182,7 @@ fun Route.couponRoutes() {
                         it[CouponsTable.usageLimit] = request.usageLimit
                         it[CouponsTable.usagePerUserLimit] = request.usagePerUserLimit
                         it[CouponsTable.isActive] = request.isActive
+                        it[CouponsTable.isRewardVoucherTemplate] = request.isRewardVoucherTemplate
                         it[CouponsTable.createdByUserId] = principal.getUserId()
                     }
                     id
@@ -182,6 +193,78 @@ fun Route.couponRoutes() {
                     CouponEnvelope(
                         data = CouponIdPayload(id = createdId),
                         message = "Coupon created successfully"
+                    )
+                )
+            }
+
+            patch("/{id}") {
+                val (principal, _) = call.requireInternalAccess()
+                if (principal.getRole() != AppRoles.ADMIN) {
+                    return@patch call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Only ADMIN can update coupon"))
+                }
+
+                val couponId = call.parameters["id"]
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Coupon ID is required"))
+                val request = call.receive<CouponCreateRequest>()
+                val normalizedCode = request.code.trim().uppercase()
+                val discountType = request.discountType.trim().uppercase()
+                if (normalizedCode.isBlank()) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Coupon code is required"))
+                }
+                if (request.name.isBlank()) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Coupon name is required"))
+                }
+                if (discountType !in setOf("PERCENT", "FIXED_AMOUNT")) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountType must be PERCENT or FIXED_AMOUNT"))
+                }
+                if (request.discountValue <= 0.0) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountValue must be > 0"))
+                }
+
+                val updated = try {
+                    transaction {
+                        val current = CouponsTable
+                            .selectAll()
+                            .where { CouponsTable.id eq couponId }
+                            .singleOrNull()
+                            ?: throw IllegalArgumentException("Coupon not found")
+
+                        val sameCode = CouponsTable
+                            .selectAll()
+                            .where { CouponsTable.code eq normalizedCode }
+                            .singleOrNull()
+                        if (sameCode != null && sameCode[CouponsTable.id] != current[CouponsTable.id]) {
+                            throw IllegalArgumentException("Coupon code already exists")
+                        }
+
+                        CouponsTable.update({ CouponsTable.id eq couponId }) {
+                            it[CouponsTable.code] = normalizedCode
+                            it[CouponsTable.name] = request.name.trim()
+                            it[CouponsTable.description] = request.description?.trim()?.ifBlank { null }
+                            it[CouponsTable.discountType] = discountType
+                            it[CouponsTable.discountValue] = request.discountValue.toBigDecimal()
+                            it[CouponsTable.minOrderTotal] = request.minOrderTotal?.toBigDecimal()
+                            it[CouponsTable.maxDiscountAmount] = request.maxDiscountAmount?.toBigDecimal()
+                            it[CouponsTable.usageLimit] = request.usageLimit
+                            it[CouponsTable.usagePerUserLimit] = request.usagePerUserLimit
+                            it[CouponsTable.isActive] = request.isActive
+                            it[CouponsTable.isRewardVoucherTemplate] = request.isRewardVoucherTemplate
+                        }
+
+                        CouponsTable
+                            .selectAll()
+                            .where { CouponsTable.id eq couponId }
+                            .single()
+                            .let(::couponDtoFromRow)
+                    }
+                } catch (e: IllegalArgumentException) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid coupon")))
+                }
+
+                call.respond(
+                    CouponEnvelope(
+                        data = updated,
+                        message = "Coupon updated successfully"
                     )
                 )
             }
@@ -223,20 +306,13 @@ fun Route.couponRoutes() {
     }
 }
 
-internal fun computeCouponDiscount(
-    code: String,
+internal fun computeCouponDiscountFromRow(
+    coupon: ResultRow,
     orderTotal: BigDecimal,
-    userId: String?
+    userId: String?,
+    enforceGlobalUsageLimit: Boolean = true,
+    enforcePerUserUsageLimit: Boolean = true
 ): Result<CouponComputation> {
-    val normalizedCode = code.trim().uppercase()
-    if (normalizedCode.isBlank()) return Result.failure(IllegalArgumentException("Coupon code is required"))
-
-    val coupon = CouponsTable
-        .selectAll()
-        .where { CouponsTable.code eq normalizedCode }
-        .singleOrNull()
-        ?: return Result.failure(IllegalArgumentException("Coupon not found"))
-
     if (!coupon[CouponsTable.isActive]) {
         return Result.failure(IllegalArgumentException("Coupon is inactive"))
     }
@@ -246,12 +322,14 @@ internal fun computeCouponDiscount(
         return Result.failure(IllegalArgumentException("Order total does not meet coupon minimum value"))
     }
 
-    val usageLimit = coupon[CouponsTable.usageLimit]
-    if (usageLimit != null && coupon[CouponsTable.usedCount] >= usageLimit) {
-        return Result.failure(IllegalArgumentException("Coupon usage limit reached"))
+    if (enforceGlobalUsageLimit) {
+        val usageLimit = coupon[CouponsTable.usageLimit]
+        if (usageLimit != null && coupon[CouponsTable.usedCount] >= usageLimit) {
+            return Result.failure(IllegalArgumentException("Coupon usage limit reached"))
+        }
     }
 
-    if (!userId.isNullOrBlank()) {
+    if (!userId.isNullOrBlank() && enforcePerUserUsageLimit) {
         val usagePerUserLimit = coupon[CouponsTable.usagePerUserLimit]
         if (usagePerUserLimit != null) {
             val usedByUser = CouponRedemptionsTable
@@ -293,6 +371,33 @@ internal fun computeCouponDiscount(
             code = coupon[CouponsTable.code],
             discountAmount = normalizedDiscount
         )
+    )
+}
+
+internal fun computeCouponDiscount(
+    code: String,
+    orderTotal: BigDecimal,
+    userId: String?
+): Result<CouponComputation> {
+    val normalizedCode = code.trim().uppercase()
+    if (normalizedCode.isBlank()) return Result.failure(IllegalArgumentException("Coupon code is required"))
+
+    val coupon = CouponsTable
+        .selectAll()
+        .where { CouponsTable.code eq normalizedCode }
+        .singleOrNull()
+        ?: return Result.failure(IllegalArgumentException("Coupon not found"))
+
+    if (coupon[CouponsTable.isRewardVoucherTemplate]) {
+        return Result.failure(IllegalArgumentException("Coupon is not valid for direct checkout"))
+    }
+
+    return computeCouponDiscountFromRow(
+        coupon = coupon,
+        orderTotal = orderTotal,
+        userId = userId,
+        enforceGlobalUsageLimit = true,
+        enforcePerUserUsageLimit = true
     )
 }
 

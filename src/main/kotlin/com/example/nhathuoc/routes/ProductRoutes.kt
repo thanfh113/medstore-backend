@@ -35,9 +35,14 @@ private data class ProductCertificatePayload(
     val type: String = "MOH_LICENSE",
     val name: String,
     val fileUrl: String,
+    val fileType: String = "IMAGE",
+    val publicId: String? = null,
+    val resourceType: String = "image",
+    val thumbnailUrl: String? = null,
     val issueDate: String? = null,
     val expireDate: String? = null,
-    val issuer: String? = null
+    val issuer: String? = null,
+    val isActive: Boolean = true
 )
 
 @Serializable
@@ -239,9 +244,14 @@ private fun ProductDto.toDetailJson(): JsonObject {
                     put("type", certificate.type)
                     put("name", certificate.name)
                     put("fileUrl", certificate.fileUrl)
+                    put("fileType", certificate.fileType)
+                    put("publicId", certificate.publicId?.let(::JsonPrimitive) ?: JsonNull)
+                    put("resourceType", certificate.resourceType)
+                    put("thumbnailUrl", certificate.thumbnailUrl?.let(::JsonPrimitive) ?: JsonNull)
                     put("issueDate", certificate.issueDate?.let(::JsonPrimitive) ?: JsonNull)
                     put("expireDate", certificate.expireDate?.let(::JsonPrimitive) ?: JsonNull)
                     put("issuer", certificate.issuer?.let(::JsonPrimitive) ?: JsonNull)
+                    put("isActive", certificate.isActive)
                 }
             }
         }
@@ -320,7 +330,7 @@ private fun ProductDto.toAndroidProductJson(): JsonObject {
 }
 
 private fun ProductCertificateDto.toAndroidCertificateJson(product: ProductDto): JsonObject {
-    val deliveryUrl = CloudinaryHelper.signedDeliveryUrl(fileUrl)
+    val deliveryUrl = CloudinaryHelper.signedDeliveryUrl(fileUrl, resourceType)
     return buildJsonObject {
         put("id", id)
         put("productId", product.id)
@@ -330,26 +340,84 @@ private fun ProductCertificateDto.toAndroidCertificateJson(product: ProductDto):
         put("issueDate", issueDate ?: "")
         put("expiryDate", expireDate?.let(::JsonPrimitive) ?: JsonNull)
         put("documentUrl", deliveryUrl)
-        put("isActive", true)
+        put("fileUrl", deliveryUrl)
+        put("fileType", fileType)
+        put("publicId", publicId?.let(::JsonPrimitive) ?: JsonNull)
+        put("resourceType", resourceType)
+        put("thumbnailUrl", thumbnailUrl?.let(::JsonPrimitive) ?: JsonNull)
+        put("isActive", isActive)
         put("createdAt", product.createdAt.toString())
         put("updatedAt", product.updatedAt.toString())
     }
 }
 
-private fun resolvePublicCategoryId(rawCategory: String?): String? {
+private val publicCategoryAliases = mapOf(
+    "dụng cụ tiêm truyền" to listOf("cat-syringe", "cat-supplies"),
+    "kim tiêm" to listOf("cat-syringe"),
+    "ống xi lanh" to listOf("cat-syringe"),
+    "dây truyền dịch" to listOf("cat-supplies"),
+    "bơm tiêm" to listOf("cat-syringe"),
+    "băng gạc - cầm máu" to listOf("cat-bandage"),
+    "băng dính y tế" to listOf("cat-bandage"),
+    "gạc vô trùng" to listOf("cat-bandage"),
+    "băng cuộn" to listOf("cat-bandage"),
+    "băng keo thấm tẩm kháng sinh" to listOf("cat-bandage"),
+    "thiết bị chẩn đoán" to listOf("cat-diagnostic", "cat-monitor"),
+    "máy đo huyết áp" to listOf("cat-monitor"),
+    "nhiệt kế y tế" to listOf("cat-diagnostic"),
+    "máy đo spo2" to listOf("cat-diagnostic", "cat-monitor"),
+    "máy đo đường huyết" to listOf("cat-diagnostic", "cat-monitor"),
+    "khẩu trang - ppe" to listOf("cat-protect"),
+    "khẩu trang y tế" to listOf("cat-protect"),
+    "khẩu trang n95" to listOf("cat-protect"),
+    "quần áo bảo hộ" to listOf("cat-protect"),
+    "kính bảo hộ" to listOf("cat-protect"),
+    "thiết bị phẫu thuật" to listOf("cat-instrument"),
+    "dụng cụ vi phẫu" to listOf("cat-instrument"),
+    "kẹp phẫu thuật" to listOf("cat-instrument"),
+    "dây khâu" to listOf("cat-instrument"),
+    "van cầm máu" to listOf("cat-instrument"),
+    "chống nhiễm khuẩn" to listOf("cat-protect", "cat-supplies"),
+    "phục hồi chức năng" to listOf("cat-therapy"),
+    "nạng - xe lăn" to listOf("cat-therapy"),
+    "dụng cụ vật lý trị liệu" to listOf("cat-therapy"),
+    "nẹp chỉnh hình" to listOf("cat-therapy"),
+    "vật tư xét nghiệm" to listOf("cat-diagnostic")
+)
+
+private fun resolvePublicCategoryIds(rawCategory: String?): List<String>? {
     val raw = rawCategory?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    publicCategoryAliases[raw.lowercase()]?.let { return it }
+
     return transaction {
-        CategoriesTable
+        val categories = CategoriesTable
             .selectAll()
-            .where {
-                (CategoriesTable.id eq raw) or
-                    (CategoriesTable.slug eq raw) or
-                    (CategoriesTable.name eq raw)
+            .map {
+                Triple(
+                    it[CategoriesTable.id],
+                    it[CategoriesTable.parentId],
+                    listOf(it[CategoriesTable.slug], it[CategoriesTable.name])
+                )
             }
-            .limit(1)
-            .singleOrNull()
-            ?.get(CategoriesTable.id)
-    } ?: raw
+        val matchedId = categories
+            .firstOrNull { (id, _, aliases) ->
+                id == raw || aliases.any { it?.equals(raw, ignoreCase = true) == true }
+            }
+            ?.first
+            ?: return@transaction listOf(raw)
+
+        val result = linkedSetOf(matchedId)
+        var added: Boolean
+        do {
+            added = false
+            categories
+                .filter { (_, parentId, _) -> parentId in result }
+                .forEach { (id, _, _) ->
+                    if (result.add(id)) added = true
+                }
+        } while (added)
+        result.toList()
+    }
 }
 
 private fun ProductDto.toListItemResponse(): ProductListItemResponse {
@@ -430,9 +498,14 @@ private fun CreateProductPayload.toServiceRequest(): CreateProductRequest {
                 type = it.type,
                 name = it.name,
                 fileUrl = it.fileUrl,
+                fileType = it.fileType,
+                publicId = it.publicId,
+                resourceType = it.resourceType,
+                thumbnailUrl = it.thumbnailUrl,
                 issueDate = it.issueDate,
                 expireDate = it.expireDate,
-                issuer = it.issuer
+                issuer = it.issuer,
+                isActive = it.isActive
             )
         }
     )
@@ -475,9 +548,14 @@ private fun UpdateProductPayload.toServiceRequest(): UpdateProductRequest {
                 type = it.type,
                 name = it.name,
                 fileUrl = it.fileUrl,
+                fileType = it.fileType,
+                publicId = it.publicId,
+                resourceType = it.resourceType,
+                thumbnailUrl = it.thumbnailUrl,
                 issueDate = it.issueDate,
                 expireDate = it.expireDate,
-                issuer = it.issuer
+                issuer = it.issuer,
+                isActive = it.isActive
             )
         }
     )
@@ -490,7 +568,7 @@ fun Route.productRoutes() {
         // GET /api/v1/products - Public endpoint
         get {
             try {
-                val categoryId = resolvePublicCategoryId(call.parameters["category"])
+                val categoryIds = resolvePublicCategoryIds(call.parameters["category"])
                 val brand = call.parameters["brand"]
                 val minPrice = call.parameters["minPrice"]?.toBigDecimalOrNull()
                 val maxPrice = call.parameters["maxPrice"]?.toBigDecimalOrNull()
@@ -506,7 +584,7 @@ fun Route.productRoutes() {
                 }
 
                 val response = productService.getProducts(
-                    categoryId = categoryId,
+                    categoryIds = categoryIds,
                     brand = brand,
                     minPrice = minPrice,
                     maxPrice = maxPrice,
@@ -517,7 +595,7 @@ fun Route.productRoutes() {
                 )
                 call.application.log.info(
                     "Desktop/Public products request: category={}, brand={}, page={}, limit={}, returned={}",
-                    categoryId ?: "ALL",
+                    categoryIds?.joinToString(",") ?: "ALL",
                     brand ?: "ALL",
                     page,
                     limit,
@@ -539,7 +617,7 @@ fun Route.productRoutes() {
                         put("hasPrev", response.page > 1)
                     }
                     putJsonObject("filters") {
-                        put("category", categoryId?.let(::JsonPrimitive) ?: JsonNull)
+                        put("category", categoryIds?.joinToString(",")?.let(::JsonPrimitive) ?: JsonNull)
                         put("brand", brand?.let(::JsonPrimitive) ?: JsonNull)
                         put("minPrice", minPrice?.toDouble()?.let(::JsonPrimitive) ?: JsonNull)
                         put("maxPrice", maxPrice?.toDouble()?.let(::JsonPrimitive) ?: JsonNull)

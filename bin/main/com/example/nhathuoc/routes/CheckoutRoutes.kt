@@ -37,7 +37,8 @@ fun Route.checkoutRoutes() {
                     val preview = checkoutService.getCheckoutPreview(
                         userId = userId,
                         addressId = request.addressId,
-                        useRewardPoints = request.rewardPointsToUse
+                        useRewardPoints = request.rewardPointsToUse,
+                        promoCode = request.promoCode
                     )
 
                     call.respond(

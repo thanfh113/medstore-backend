@@ -37,6 +37,9 @@ fun Application.configureDatabase() {
             // Core user & authentication tables
             UsersTable,
             RefreshTokensTable,
+            UserVerificationTokensTable,
+            UserPushTokensTable,
+            UserAccountActionsTable,
             EmployeeProfilesTable,
 
             // Shop & business tables
@@ -70,6 +73,12 @@ fun Application.configureDatabase() {
             ChatMessagesTable,
             AiConversationsTable,
             ReviewsTable,
+            ReviewAttachmentsTable,
+            ReviewReportsTable,
+            OrderComplaintsTable,
+            ComplaintAttachmentsTable,
+            ComplaintMessagesTable,
+            ComplaintEventsTable,
             NotificationsTable,
 
             // CMS & content tables

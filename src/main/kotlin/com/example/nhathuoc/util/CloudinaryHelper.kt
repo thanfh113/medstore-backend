@@ -113,15 +113,22 @@ object CloudinaryHelper {
     }
 
     fun signedDeliveryUrl(fileUrl: String): String {
+        return signedDeliveryUrl(fileUrl, null)
+    }
+
+    fun signedDeliveryUrl(fileUrl: String, preferredResourceType: String?): String {
         if (fileUrl.isBlank()) return fileUrl
 
-        val resourceType = when {
+        val resourceType = preferredResourceType?.takeIf { it.isNotBlank() } ?: when {
             fileUrl.contains("/raw/upload/") -> "raw"
             fileUrl.contains("/video/upload/") -> "video"
             else -> "image"
         }
-        val marker = "/$resourceType/upload/"
-        val afterUpload = fileUrl.substringAfter(marker, missingDelimiterValue = "")
+        val marker = Regex("/(image|raw|video)/upload/")
+        val match = marker.find(fileUrl) ?: return fileUrl
+        val sourceResourceType = match.groupValues[1]
+        val sourceMarker = "/$sourceResourceType/upload/"
+        val afterUpload = fileUrl.substringAfter(sourceMarker, missingDelimiterValue = "")
         if (afterUpload.isBlank()) return fileUrl
 
         val publicId = afterUpload

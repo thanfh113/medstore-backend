@@ -1,6 +1,8 @@
 package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.service.*
+import com.example.nhathuoc.util.getUserId
+import com.example.nhathuoc.util.requireInternalAccess
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -152,6 +154,31 @@ fun Route.rewardRoutes() {
                 }
             }
 
+            get("/vouchers") {
+                try {
+                    val principal = call.principal<JWTPrincipal>()
+                    val userId = principal?.payload?.getClaim("userId")?.asString()
+                        ?: return@get call.respond(
+                            HttpStatusCode.Unauthorized,
+                            mapOf("error" to "User ID not found")
+                        )
+
+                    val vouchers = rewardService.getAvailableVouchers(userId)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(
+                            data = vouchers,
+                            message = "Reward vouchers retrieved successfully"
+                        )
+                    )
+                } catch (e: Exception) {
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to get reward vouchers: ${e.message}")
+                    )
+                }
+            }
+
             // POST /api/v1/rewards/redeem - Redeem reward
             post("/redeem") {
                 try {
@@ -182,6 +209,133 @@ fun Route.rewardRoutes() {
                         HttpStatusCode.InternalServerError,
                         mapOf("error" to "Failed to redeem reward: ${e.message}")
                     )
+                }
+            }
+        }
+    }
+
+    authenticate("auth-jwt") {
+        route("/internal/rewards") {
+            get("/products") {
+                call.requireInternalAccess()
+                val rewardType = call.request.queryParameters["rewardType"]
+
+                try {
+                    val products = rewardService.getAdminRewardProducts(rewardType)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(
+                            data = products,
+                            message = "Reward products retrieved successfully"
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            post("/products") {
+                call.requireInternalAccess()
+                val request = call.receive<AdminRewardProductUpsertRequest>()
+
+                try {
+                    val product = rewardService.createRewardProduct(request)
+                    call.respond(
+                        HttpStatusCode.Created,
+                        RouteDataMessageResponse(
+                            data = product,
+                            message = "Reward product created successfully"
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            patch("/products/{id}") {
+                call.requireInternalAccess()
+                val rewardProductId = call.parameters["id"]
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Reward product ID is required"))
+                val request = call.receive<AdminRewardProductUpsertRequest>()
+
+                try {
+                    val product = rewardService.updateRewardProduct(rewardProductId, request)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(
+                            data = product,
+                            message = "Reward product updated successfully"
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            get("/redemptions") {
+                call.requireInternalAccess()
+                val status = call.request.queryParameters["status"]
+                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 100
+
+                try {
+                    val redemptions = rewardService.listRedemptions(status, limit)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(
+                            data = redemptions,
+                            message = "Reward redemptions retrieved successfully"
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            patch("/redemptions/{id}") {
+                val principal = call.requireInternalAccess().first
+                val actorUserId = principal.getUserId()
+                    ?: return@patch call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val redemptionId = call.parameters["id"]
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Redemption ID is required"))
+                val request = call.receive<UpdateRewardRedemptionRequest>()
+
+                try {
+                    val redemption = rewardService.updateRedemptionStatus(
+                        redemptionId = redemptionId,
+                        status = request.status,
+                        actorUserId = actorUserId,
+                        assignedTo = request.assignedTo,
+                        note = request.note
+                    )
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(
+                            data = redemption,
+                            message = "Reward redemption updated successfully"
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            post("/adjust-points") {
+                val principal = call.requireInternalAccess().first
+                val actorUserId = principal.getUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val request = call.receive<AdjustRewardPointsRequest>()
+
+                try {
+                    val transaction = rewardService.adjustUserPoints(actorUserId, request)
+                    call.respond(
+                        HttpStatusCode.Created,
+                        RouteDataMessageResponse(
+                            data = transaction,
+                            message = "Reward points adjusted successfully"
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
                 }
             }
         }

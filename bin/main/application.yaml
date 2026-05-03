@@ -1,0 +1,28 @@
+ktor:
+  application:
+    modules:
+      - com.example.nhathuoc.ApplicationKt.module
+  deployment:
+    port: 8080
+    host: 0.0.0.0
+
+jwt:
+  secret: "CHANGE_ME_USE_ENV"
+  issuer: "medstore-backend"
+  audience: "medstore-clients"
+  access_token_expiry: 86400000    # 24 hours in ms (từ 15 min)
+  refresh_token_expiry: 2592000000 # 30 days in ms (từ 7 days)
+
+database:
+  url: "jdbc:mysql://localhost:3306/medical_supplies_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4&useUnicode=true"
+  driver: "com.mysql.cj.jdbc.Driver"
+  user: "root"
+  password: "CHANGE_ME_USE_ENV"
+  max_pool_size: 10
+
+cloudinary:
+  cloud_name: "Root"   # ← Điền vào sau khi tạo tài khoản Cloudinary
+  api_key:    "CHANGE_ME_USE_ENV"
+  api_secret: "CHANGE_ME_USE_ENV"
+  # Folder gốc trong Cloudinary
+  folder_prefix: "medstore"

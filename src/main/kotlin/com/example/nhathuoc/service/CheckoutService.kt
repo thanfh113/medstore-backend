@@ -1,13 +1,19 @@
 package com.example.nhathuoc.service
 
 import com.example.nhathuoc.database.tables.*
+import com.example.nhathuoc.routes.computeCouponDiscount
+import com.example.nhathuoc.routes.computeCouponDiscountFromRow
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.*
 
 // ─────────────────────────────────────────────────────────────
@@ -59,6 +65,7 @@ data class OrderDto(
 // ─────────────────────────────────────────────────────────────
 
 class CheckoutService {
+    private val notificationService = NotificationService()
 
     /**
      * Validate cart before checkout
@@ -121,12 +128,14 @@ class CheckoutService {
                 price * qty.toBigDecimal()
             }
 
-            // Calculate discount (simple: 5% if subtotal > 1,000,000 VND)
-            val discount = if (subtotal > BigDecimal(1000000)) {
-                subtotal * BigDecimal(0.05)
-            } else {
-                BigDecimal.ZERO
-            }
+            val promotion = promoCode
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { code ->
+                    resolvePromotionInTx(userId = userId, promoCode = code, orderTotal = subtotal)
+                        .getOrElse { throw IllegalArgumentException(it.message ?: "Invalid promotion") }
+                }
+            val discount = promotion?.discountAmount ?: BigDecimal.ZERO
 
             // Reward points can only offset merchandise value after discount.
             val maxRewardPointsApplicable = ((subtotal - discount).coerceAtLeast(BigDecimal.ZERO) / BigDecimal(1000))
@@ -160,7 +169,8 @@ class CheckoutService {
                 appliedRewardPoints = appliedRewardPoints,
                 pointsUsedValue = pointsValue,
                 tax = tax,
-                total = total
+                total = total,
+                promotion = promotion
             )
         }
     }
@@ -168,7 +178,7 @@ class CheckoutService {
     /**
      * Get checkout preview before payment
      */
-    fun getCheckoutPreview(userId: String, addressId: String, useRewardPoints: Int = 0): CheckoutPreviewDto {
+    fun getCheckoutPreview(userId: String, addressId: String, useRewardPoints: Int = 0, promoCode: String? = null): CheckoutPreviewDto {
         return transaction {
             // Get address
             val address = UserAddressesTable
@@ -198,7 +208,7 @@ class CheckoutService {
             val cartSummary = cartService.getCartSummary(userId)
 
             // Calculate totals
-            val totals = calculateTotals(userId, useRewardPoints)
+            val totals = calculateTotals(userId, useRewardPoints, promoCode)
 
             CheckoutPreviewDto(
                 subtotal = totals.subtotal,
@@ -236,7 +246,7 @@ class CheckoutService {
                 ?: throw IllegalArgumentException("Địa chỉ không tìm thấy")
 
             // Calculate totals
-            val totals = calculateTotals(userId, request.rewardPointsToUse)
+            val totals = calculateTotals(userId, request.rewardPointsToUse, request.promoCode)
             val appliedRewardPoints = totals.appliedRewardPoints
 
             // Get cart items for order items
@@ -289,6 +299,7 @@ class CheckoutService {
                 it[OrdersTable.subtotal] = totals.subtotal
                 it[OrdersTable.shippingFee] = totals.shippingFee
                 it[OrdersTable.discount] = totals.discount
+                it[OrdersTable.couponId] = totals.promotion?.couponId
                 it[OrdersTable.pointsUsed] = appliedRewardPoints
                 it[OrdersTable.pointsEarned] = pointsEarned
                 it[OrdersTable.total] = totals.total
@@ -324,6 +335,40 @@ class CheckoutService {
                 }
             }
 
+            totals.promotion?.let { promotion ->
+                CouponRedemptionsTable.insert {
+                    it[CouponRedemptionsTable.id] = UUID.randomUUID().toString()
+                    it[CouponRedemptionsTable.couponId] = promotion.couponId
+                    it[CouponRedemptionsTable.orderId] = orderId
+                    it[CouponRedemptionsTable.userId] = userId
+                    it[CouponRedemptionsTable.appliedDiscountAmount] = promotion.discountAmount
+                    it[CouponRedemptionsTable.status] = "APPLIED"
+                }
+
+                CouponsTable.update({ CouponsTable.id eq promotion.couponId }) {
+                    with(SqlExpressionBuilder) {
+                        it.update(CouponsTable.usedCount, CouponsTable.usedCount + 1)
+                    }
+                }
+
+                if (promotion.rewardRedemptionId != null) {
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                    RewardRedemptionsTable.update({ RewardRedemptionsTable.id eq promotion.rewardRedemptionId }) {
+                        it[status] = "USED"
+                        it[redeemedOrderId] = orderId
+                        it[voucherUsedAt] = now
+                        it[updatedAt] = now
+                    }
+                    notificationService.createUserNotification(
+                        userId = userId,
+                        title = "Voucher đã được sử dụng",
+                        body = "Mã ${promotion.code} đã được áp dụng cho đơn $orderCode.",
+                        type = "REWARD",
+                        refId = promotion.rewardRedemptionId
+                    )
+                }
+            }
+
             // Clear cart
             CartItemsTable.deleteWhere { CartItemsTable.userId eq userId }
 
@@ -339,6 +384,8 @@ class CheckoutService {
                     it[RewardTransactionsTable.id] = UUID.randomUUID().toString()
                     it[RewardTransactionsTable.userId] = userId
                     it[RewardTransactionsTable.orderId] = orderId
+                    it[RewardTransactionsTable.refType] = "ORDER"
+                    it[RewardTransactionsTable.refId] = orderId
                     it[RewardTransactionsTable.type] = "REDEEM"
                     it[RewardTransactionsTable.points] = -appliedRewardPoints
                     it[RewardTransactionsTable.description] = "Dùng điểm thưởng cho đơn hàng $orderCode"
@@ -368,6 +415,56 @@ class CheckoutService {
                 paymentStatus = "UNPAID",
                 notes = request.notes,
                 createdAt = createdOrder[OrdersTable.createdAt]
+            )
+        }
+    }
+
+    private fun resolvePromotionInTx(
+        userId: String,
+        promoCode: String,
+        orderTotal: BigDecimal
+    ): Result<CheckoutPromotion> {
+        val normalizedCode = promoCode.trim().uppercase()
+
+        val rewardVoucher = (RewardRedemptionsTable innerJoin RewardProductsTable innerJoin CouponsTable)
+            .selectAll()
+            .where {
+                (RewardRedemptionsTable.userId eq userId) and
+                    (RewardRedemptionsTable.issuedVoucherCode eq normalizedCode) and
+                    (RewardRedemptionsTable.status eq "APPROVED") and
+                    (RewardRedemptionsTable.redeemedOrderId eq null) and
+                    (RewardProductsTable.rewardType eq "VOUCHER")
+            }
+            .singleOrNull()
+
+        if (rewardVoucher != null) {
+            return computeCouponDiscountFromRow(
+                coupon = rewardVoucher,
+                orderTotal = orderTotal,
+                userId = userId,
+                enforceGlobalUsageLimit = false,
+                enforcePerUserUsageLimit = false
+            ).map { computed ->
+                CheckoutPromotion(
+                    couponId = computed.couponId,
+                    code = normalizedCode,
+                    discountAmount = computed.discountAmount,
+                    rewardRedemptionId = rewardVoucher[RewardRedemptionsTable.id],
+                    source = "REWARD_VOUCHER"
+                )
+            }
+        }
+
+        return computeCouponDiscount(
+            code = normalizedCode,
+            orderTotal = orderTotal,
+            userId = userId
+        ).map { computed ->
+            CheckoutPromotion(
+                couponId = computed.couponId,
+                code = computed.code,
+                discountAmount = computed.discountAmount,
+                source = "PUBLIC_COUPON"
             )
         }
     }
@@ -429,7 +526,16 @@ data class CheckoutTotals(
     val appliedRewardPoints: Int,
     val pointsUsedValue: BigDecimal,
     val tax: BigDecimal,
-    val total: BigDecimal
+    val total: BigDecimal,
+    val promotion: CheckoutPromotion? = null
+)
+
+data class CheckoutPromotion(
+    val couponId: String,
+    val code: String,
+    val discountAmount: BigDecimal,
+    val rewardRedemptionId: String? = null,
+    val source: String = "PUBLIC_COUPON"
 )
 
 data class OrderDetailDto(

@@ -5,6 +5,7 @@ import com.example.nhathuoc.database.tables.ExpensesTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.RefreshTokensTable
 import com.example.nhathuoc.database.tables.RewardAccountsTable
+import com.example.nhathuoc.database.tables.UserAccountActionsTable
 import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.service.ProductDeleteRequestDto
 import com.example.nhathuoc.service.ProductService
@@ -62,7 +63,12 @@ private data class AdminEmployeeProfileDto(
     val qualificationInstitution: String? = null,
     val qualificationDocumentUrl: String? = null,
     val qualificationDocumentPublicId: String? = null,
+    val qualificationDocumentType: String? = null,
+    val qualificationDocumentResourceType: String? = null,
     val qualificationVerified: Boolean,
+    val qualificationSubmittedAt: String? = null,
+    val qualificationVerifiedBy: String? = null,
+    val qualificationVerifiedAt: String? = null,
     val qualificationNote: String? = null,
     val createdAt: String,
     val updatedAt: String
@@ -75,6 +81,8 @@ private data class AdminEmployeeProfileRequest(
     val qualificationInstitution: String? = null,
     val qualificationDocumentUrl: String? = null,
     val qualificationDocumentPublicId: String? = null,
+    val qualificationDocumentType: String? = null,
+    val qualificationDocumentResourceType: String? = null,
     val qualificationVerified: Boolean? = null,
     val qualificationNote: String? = null
 )
@@ -137,7 +145,12 @@ private fun ResultRow.toEmployeeProfileDto(): AdminEmployeeProfileDto? {
         qualificationInstitution = this[EmployeeProfilesTable.qualificationInstitution],
         qualificationDocumentUrl = this[EmployeeProfilesTable.qualificationDocumentUrl],
         qualificationDocumentPublicId = this[EmployeeProfilesTable.qualificationDocumentPublicId],
+        qualificationDocumentType = this[EmployeeProfilesTable.qualificationDocumentType],
+        qualificationDocumentResourceType = this[EmployeeProfilesTable.qualificationDocumentResourceType],
         qualificationVerified = this[EmployeeProfilesTable.qualificationVerified],
+        qualificationSubmittedAt = this[EmployeeProfilesTable.qualificationSubmittedAt]?.toString(),
+        qualificationVerifiedBy = this[EmployeeProfilesTable.qualificationVerifiedBy],
+        qualificationVerifiedAt = this[EmployeeProfilesTable.qualificationVerifiedAt]?.toString(),
         qualificationNote = this[EmployeeProfilesTable.qualificationNote],
         createdAt = this[EmployeeProfilesTable.createdAt].toString(),
         updatedAt = this[EmployeeProfilesTable.updatedAt].toString()
@@ -170,13 +183,18 @@ private fun selectAdminUserById(userId: String): AdminUserDto {
 private fun upsertEmployeeProfile(
     userId: String,
     request: AdminEmployeeProfileRequest?,
-    now: LocalDateTime
+    now: LocalDateTime,
+    actorUserId: String?
 ) {
     val existing = EmployeeProfilesTable.selectAll()
         .where { EmployeeProfilesTable.userId eq userId }
         .singleOrNull()
 
     if (existing == null) {
+        val documentUrl = request?.qualificationDocumentUrl.trimToNull()
+        val documentType = request?.qualificationDocumentType.trimToNull() ?: detectDocumentType(documentUrl)
+        val documentResourceType = request?.qualificationDocumentResourceType.trimToNull() ?: defaultDocumentResourceType(documentType)
+        val verified = request?.qualificationVerified ?: false
         EmployeeProfilesTable.insert {
             it[EmployeeProfilesTable.id] = UUID.randomUUID().toString()
             it[EmployeeProfilesTable.userId] = userId
@@ -184,9 +202,14 @@ private fun upsertEmployeeProfile(
                 request?.qualificationTitle.trimToNull() ?: DEFAULT_EMPLOYEE_QUALIFICATION_TITLE
             it[EmployeeProfilesTable.qualificationSpecialty] = request?.qualificationSpecialty.trimToNull()
             it[EmployeeProfilesTable.qualificationInstitution] = request?.qualificationInstitution.trimToNull()
-            it[EmployeeProfilesTable.qualificationDocumentUrl] = request?.qualificationDocumentUrl.trimToNull()
+            it[EmployeeProfilesTable.qualificationDocumentUrl] = documentUrl
             it[EmployeeProfilesTable.qualificationDocumentPublicId] = request?.qualificationDocumentPublicId.trimToNull()
-            it[EmployeeProfilesTable.qualificationVerified] = request?.qualificationVerified ?: false
+            it[EmployeeProfilesTable.qualificationDocumentType] = documentType
+            it[EmployeeProfilesTable.qualificationDocumentResourceType] = documentResourceType
+            it[EmployeeProfilesTable.qualificationVerified] = verified
+            it[EmployeeProfilesTable.qualificationSubmittedAt] = if (documentUrl != null) now else null
+            it[EmployeeProfilesTable.qualificationVerifiedBy] = if (verified) actorUserId else null
+            it[EmployeeProfilesTable.qualificationVerifiedAt] = if (verified) now else null
             it[EmployeeProfilesTable.qualificationNote] = request?.qualificationNote.trimToNull()
             it[EmployeeProfilesTable.createdAt] = now
             it[EmployeeProfilesTable.updatedAt] = now
@@ -196,17 +219,77 @@ private fun upsertEmployeeProfile(
 
     if (request == null) return
 
+    val documentUrl = request.qualificationDocumentUrl.trimToNull()
+    val documentChanged = documentUrl != existing[EmployeeProfilesTable.qualificationDocumentUrl]
+    val nextVerified = request.qualificationVerified ?: existing[EmployeeProfilesTable.qualificationVerified]
+    val documentType = request.qualificationDocumentType.trimToNull()
+        ?: detectDocumentType(documentUrl)
+        ?: existing[EmployeeProfilesTable.qualificationDocumentType]
+    val documentResourceType = request.qualificationDocumentResourceType.trimToNull()
+        ?: defaultDocumentResourceType(documentType)
+        ?: existing[EmployeeProfilesTable.qualificationDocumentResourceType]
+
     EmployeeProfilesTable.update({ EmployeeProfilesTable.userId eq userId }) {
         it[EmployeeProfilesTable.qualificationTitle] =
             request.qualificationTitle.trimToNull() ?: existing[EmployeeProfilesTable.qualificationTitle]
         it[EmployeeProfilesTable.qualificationSpecialty] = request.qualificationSpecialty.trimToNull()
         it[EmployeeProfilesTable.qualificationInstitution] = request.qualificationInstitution.trimToNull()
-        it[EmployeeProfilesTable.qualificationDocumentUrl] = request.qualificationDocumentUrl.trimToNull()
+        it[EmployeeProfilesTable.qualificationDocumentUrl] = documentUrl
         it[EmployeeProfilesTable.qualificationDocumentPublicId] = request.qualificationDocumentPublicId.trimToNull()
-        it[EmployeeProfilesTable.qualificationVerified] =
-            request.qualificationVerified ?: existing[EmployeeProfilesTable.qualificationVerified]
+        it[EmployeeProfilesTable.qualificationDocumentType] = documentType
+        it[EmployeeProfilesTable.qualificationDocumentResourceType] = documentResourceType
+        it[EmployeeProfilesTable.qualificationVerified] = nextVerified
+        if (documentChanged && documentUrl != null) {
+            it[EmployeeProfilesTable.qualificationSubmittedAt] = now
+        }
+        if (request.qualificationVerified != null) {
+            it[EmployeeProfilesTable.qualificationVerifiedBy] = if (nextVerified) actorUserId else null
+            it[EmployeeProfilesTable.qualificationVerifiedAt] = if (nextVerified) now else null
+        }
         it[EmployeeProfilesTable.qualificationNote] = request.qualificationNote.trimToNull()
         it[EmployeeProfilesTable.updatedAt] = now
+    }
+}
+
+private fun detectDocumentType(url: String?): String? {
+    val normalized = url?.substringBefore("?")?.lowercase() ?: return null
+    return when {
+        normalized.endsWith(".pdf") -> "PDF"
+        normalized.endsWith(".png") ||
+            normalized.endsWith(".jpg") ||
+            normalized.endsWith(".jpeg") ||
+            normalized.endsWith(".webp") ||
+            normalized.endsWith(".gif") ||
+            normalized.endsWith(".heic") -> "IMAGE"
+        else -> "OTHER"
+    }
+}
+
+private fun defaultDocumentResourceType(documentType: String?): String? {
+    return when (documentType?.uppercase()) {
+        "PDF" -> "raw"
+        "IMAGE" -> "image"
+        "OTHER" -> "raw"
+        else -> null
+    }
+}
+
+private fun logAccountActionInTx(
+    targetUserId: String,
+    actorUserId: String,
+    action: String,
+    reason: String? = null,
+    metadata: String? = null,
+    now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+) {
+    UserAccountActionsTable.insert {
+        it[id] = UUID.randomUUID().toString()
+        it[UserAccountActionsTable.targetUserId] = targetUserId
+        it[UserAccountActionsTable.actorUserId] = actorUserId
+        it[UserAccountActionsTable.action] = action
+        it[UserAccountActionsTable.reason] = reason
+        it[UserAccountActionsTable.metadata] = metadata
+        it[createdAt] = now
     }
 }
 
@@ -295,7 +378,8 @@ fun Route.adminRoutes(
                 call.respond(HttpStatusCode.OK, AdminEnvelope(users, "Get users successfully"))
             }
             post("/users") {
-                call.requireRole(AppRoles.ADMIN)
+                val adminPrincipal = call.requireRole(AppRoles.ADMIN)
+                val actorUserId = adminPrincipal.getUserId()
                 val req = call.receive<AdminCreateUserRequest>()
                 val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
                 val role = req.role.trim().uppercase()
@@ -349,7 +433,7 @@ fun Route.adminRoutes(
                         }
 
                         if (role == AppRoles.EMPLOYEE) {
-                            upsertEmployeeProfile(userId, req.employeeProfile, now)
+                            upsertEmployeeProfile(userId, req.employeeProfile, now, actorUserId)
                         }
 
                         selectAdminUserById(userId)
@@ -361,7 +445,8 @@ fun Route.adminRoutes(
                 }
             }
             put("/users/{id}") {
-                call.requireRole(AppRoles.ADMIN)
+                val adminPrincipal = call.requireRole(AppRoles.ADMIN)
+                val actorUserId = adminPrincipal.getUserId()
                 val userId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "User ID is required"))
                 val req = call.receive<AdminUpdateUserRequest>()
                 val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
@@ -414,7 +499,7 @@ fun Route.adminRoutes(
                         }
 
                         if (nextRole == AppRoles.EMPLOYEE) {
-                            upsertEmployeeProfile(userId, req.employeeProfile, now)
+                            upsertEmployeeProfile(userId, req.employeeProfile, now, actorUserId)
                         }
 
                         selectAdminUserById(userId)
@@ -426,7 +511,9 @@ fun Route.adminRoutes(
                 }
             }
             put("/users/{id}/ban") {
-                call.requireRole(AppRoles.ADMIN)
+                val adminPrincipal = call.requireRole(AppRoles.ADMIN)
+                val actorUserId = adminPrincipal.getUserId()
+                    ?: return@put call.respond(HttpStatusCode.Unauthorized)
                 val userId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "User ID is required"))
                 val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
                 transaction {
@@ -439,12 +526,18 @@ fun Route.adminRoutes(
                         it[UsersTable.isActive] = !active
                         it[UsersTable.updatedAt] = now
                     }
+                    logAccountActionInTx(
+                        targetUserId = userId,
+                        actorUserId = actorUserId,
+                        action = if (active) "LOCK" else "UNLOCK",
+                        reason = if (active) "Admin locked account" else "Admin unlocked account",
+                        now = now
+                    )
                 }
                 call.respond(AdminEnvelope(mapOf("id" to userId), "Toggle user active state successfully"))
             }
             delete("/users/{id}") {
-                call.requireRole(AppRoles.ADMIN)
-                val principal = call.principal<JWTPrincipal>() ?: return@delete call.respond(HttpStatusCode.Unauthorized)
+                val principal = call.requireRole(AppRoles.ADMIN)
                 val currentAdminId = principal.getUserId() ?: return@delete call.respond(HttpStatusCode.Unauthorized)
                 val userId = call.parameters["id"]
                     ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "User ID is required"))
@@ -486,6 +579,13 @@ fun Route.adminRoutes(
                         RefreshTokensTable.update({ RefreshTokensTable.userId eq userId }) {
                             it[RefreshTokensTable.revokedAt] = now
                         }
+                        logAccountActionInTx(
+                            targetUserId = userId,
+                            actorUserId = currentAdminId,
+                            action = "SOFT_DELETE",
+                            reason = "Admin soft deleted account",
+                            now = now
+                        )
                     }
                     call.respond(AdminEnvelope(mapOf("id" to userId), "Delete user successfully"))
                 } catch (e: IllegalArgumentException) {
@@ -493,7 +593,9 @@ fun Route.adminRoutes(
                 }
             }
             post("/users/{id}/reset-password") {
-                call.requireRole(AppRoles.ADMIN)
+                val adminPrincipal = call.requireRole(AppRoles.ADMIN)
+                val actorUserId = adminPrincipal.getUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized)
                 val userId = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "User ID is required"))
                 val request = call.receive<AdminResetPasswordRequest>()
                 if (request.newPassword.length < 6) {
@@ -509,6 +611,13 @@ fun Route.adminRoutes(
                         it[UsersTable.password] = PasswordHelper.hash(request.newPassword)
                         it[UsersTable.updatedAt] = now
                     }
+                    logAccountActionInTx(
+                        targetUserId = userId,
+                        actorUserId = actorUserId,
+                        action = "RESET_PASSWORD",
+                        reason = "Admin reset password",
+                        now = now
+                    )
                 }
                 call.respond(AdminEnvelope(mapOf("id" to userId), "Reset password successfully"))
             }

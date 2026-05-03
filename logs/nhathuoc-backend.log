@@ -342,3 +342,101 @@
 2026-04-23 12:35:20.476 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 4ms
 2026-04-23 12:35:21.596 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 100ms
 2026-04-23 12:35:27.122 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 89ms
+2026-04-23 23:16:57.463 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-04-23 23:16:58.306 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-04-23 23:17:00.559 [main] INFO  Exposed - Preparing create tables statements took 351ms
+2026-04-23 23:17:00.600 [main] INFO  Exposed - Executing create tables statements took 40ms
+2026-04-23 23:17:02.168 [main] INFO  Exposed - Extracting table columns took 1568ms
+2026-04-23 23:17:02.492 [main] INFO  Exposed - Extracting primary keys took 323ms
+2026-04-23 23:17:02.860 [main] INFO  Exposed - Extracting column constraints took 281ms
+2026-04-23 23:17:02.900 [main] INFO  Exposed - Preparing alter table statements took 2300ms
+2026-04-23 23:17:07.319 [main] INFO  Exposed - Executing alter table statements took 4418ms
+2026-04-23 23:17:07.930 [main] WARN  Exposed - List of excessive indices:
+2026-04-23 23:17:07.931 [main] WARN  Exposed - 			'chat_sessions'.'' -> idx_chat_sessions_type, fk_chat_sessions_consultant__id
+2026-04-23 23:17:07.931 [main] INFO  Exposed - SQL Queries to remove excessive indices:
+2026-04-23 23:17:07.932 [main] INFO  Exposed - 			[ALTER TABLE chat_sessions DROP INDEX idx_chat_sessions_type];
+2026-04-23 23:17:07.962 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-04-23 23:17:07.963 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-04-23 23:17:07.963 [main] INFO  Exposed - Index on table 'user_verification_tokens' differs only in name: in db idx_user_verification_tokens_hash -> in mapping user_verification_tokens_token_hash
+2026-04-23 23:17:07.963 [main] INFO  Exposed - Index on table 'user_verification_tokens' differs only in name: in db idx_user_verification_tokens_user -> in mapping user_verification_tokens_user_id_purpose_expires_at
+2026-04-23 23:17:07.963 [main] INFO  Exposed - Index on table 'user_push_tokens' differs only in name: in db idx_user_push_tokens_device -> in mapping user_push_tokens_device_id
+2026-04-23 23:17:07.963 [main] INFO  Exposed - Index on table 'user_push_tokens' differs only in name: in db idx_user_push_tokens_user -> in mapping user_push_tokens_user_id_is_active
+2026-04-23 23:17:07.971 [main] INFO  Exposed - Index on table 'user_account_actions' differs only in name: in db idx_user_account_actions_target -> in mapping user_account_actions_target_user_id_created_at
+2026-04-23 23:17:07.971 [main] INFO  Exposed - Index on table 'user_account_actions' differs only in name: in db idx_user_account_actions_actor -> in mapping user_account_actions_actor_user_id_created_at
+2026-04-23 23:17:07.971 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-04-23 23:17:07.971 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-04-23 23:17:07.971 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-04-23 23:17:07.972 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-04-23 23:17:07.972 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-04-23 23:17:07.972 [main] INFO  Exposed - Index on table 'product_delete_requests' differs only in name: in db idx_product_delete_requests_status -> in mapping product_delete_requests_status
+2026-04-23 23:17:07.973 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-04-23 23:17:07.973 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-04-23 23:17:07.979 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-04-23 23:17:07.980 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-04-23 23:17:07.980 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-04-23 23:17:07.980 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-04-23 23:17:07.981 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-04-23 23:17:07.981 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-04-23 23:17:07.981 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-04-23 23:17:07.982 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-04-23 23:17:07.983 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-04-23 23:17:07.984 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-04-23 23:17:07.984 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-04-23 23:17:07.984 [main] INFO  Exposed - Index on table 'complaint_messages' differs only in name: in db idx_complaint_messages_complaint -> in mapping complaint_messages_complaint_id_created_at
+2026-04-23 23:17:07.984 [main] INFO  Exposed - Index on table 'expense_categories' differs only in name: in db uq_expense_categories_code -> in mapping expense_categories_code_unique
+2026-04-23 23:17:07.984 [main] INFO  Exposed - Index on table 'category_attributes' differs only in name: in db uq_cat_attr_key -> in mapping category_attributes_category_id_attr_key_unique
+2026-04-23 23:17:07.984 [main] INFO  Exposed - Index on table 'product_attribute_values' differs only in name: in db uq_prod_attr -> in mapping product_attribute_values_product_id_attribute_id_unique
+2026-04-23 23:17:07.985 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payment_methods':
+		Index 'idx_payment_methods_type' for 'payment_methods' on columns com.example.nhathuoc.database.tables.PaymentMethodsTable.type
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'health_articles':
+		Index 'idx_health_created_at' for 'health_articles' on columns com.example.nhathuoc.database.tables.HealthArticlesTable.created_at
+		Index 'idx_health_published' for 'health_articles' on columns com.example.nhathuoc.database.tables.HealthArticlesTable.is_published
+		Index 'idx_health_category' for 'health_articles' on columns com.example.nhathuoc.database.tables.HealthArticlesTable.category
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'product_batches':
+		Index 'idx_batches_expiry' for 'product_batches' on columns com.example.nhathuoc.database.tables.ProductBatchesTable.exp_date
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'expenses':
+		Index 'idx_expenses_status' for 'expenses' on columns com.example.nhathuoc.database.tables.ExpensesTable.status
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+		Index 'fk_payments_payment_method_id__id' for 'payments' on columns 
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'chat_messages':
+		Index 'idx_messages_sender_type' for 'chat_messages' on columns 
+2026-04-23 23:17:07.986 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'chat_sessions':
+		Index 'fk_chat_sessions_consultant__id' for 'chat_sessions' on columns 
+		Index 'idx_chat_sessions_type' for 'chat_sessions' on columns 
+2026-04-23 23:17:07.987 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+2026-04-23 23:17:07.987 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-04-23 23:17:07.994 [main] INFO  Exposed - Checking mapping consistence took 675ms
+2026-04-23 23:17:08.084 [main] INFO  Application - Database connected and tables created.
+2026-04-23 23:17:13.267 [main] INFO  Application - Application started in 18.021 seconds.
+2026-04-23 23:17:14.773 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-04-23 23:17:29.783 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Auth login attempt: credential=Admin@medstore.vn
+2026-04-23 23:17:30.649 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Auth login success: userId=u-admin-001, role=ADMIN
+2026-04-23 23:17:32.389 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 2776ms
+2026-04-23 23:17:33.106 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 281ms
+2026-04-23 23:18:16.498 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=14
+2026-04-23 23:18:16.920 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 886ms
+2026-04-23 23:18:25.970 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=14
+2026-04-23 23:18:25.998 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 816ms
+2026-04-23 23:18:28.808 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 85ms
+2026-04-23 23:18:31.179 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=14
+2026-04-23 23:18:31.185 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 161ms
+2026-04-23 23:18:38.009 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 88ms
+2026-04-23 23:18:38.011 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 86ms
+2026-04-23 23:24:26.870 [eventLoopGroupProxy-4-8] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=14
+2026-04-23 23:24:26.873 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 54ms
