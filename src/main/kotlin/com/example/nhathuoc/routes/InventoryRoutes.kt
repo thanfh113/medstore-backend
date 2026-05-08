@@ -1,6 +1,6 @@
 package com.example.nhathuoc.routes
 
-import com.example.nhathuoc.service.CreateBatchRequest
+import com.example.nhathuoc.service.CreateStockReceiptRequest
 import com.example.nhathuoc.service.InventoryService
 import com.example.nhathuoc.util.requireInternalAccess
 import io.ktor.http.*
@@ -16,12 +16,12 @@ fun Route.inventoryRoutes() {
 
     route("/inventory") {
         authenticate("auth-jwt") {
-            // POST /api/v1/inventory/batches - internal roles only
-            post("/batches") {
+            // POST /api/v1/inventory/stock - product-level stock receipt
+            post("/stock") {
                 try {
                     call.requireInternalAccess()
 
-                    val request = call.receive<CreateBatchRequest>()
+                    val request = call.receive<CreateStockReceiptRequest>()
 
                     // Validate request
                     if (request.quantity <= 0) {
@@ -31,13 +31,13 @@ fun Route.inventoryRoutes() {
                         )
                     }
 
-                    val batchId = inventoryService.createBatch(request)
+                    val productId = inventoryService.receiveStock(request)
 
                     call.respond(
                         HttpStatusCode.Created,
                         mapOf(
-                            "data" to mapOf("id" to batchId),
-                            "message" to "Inventory batch created successfully"
+                            "data" to mapOf("id" to productId),
+                            "message" to "Product stock updated successfully"
                         )
                     )
                 } catch (e: IllegalArgumentException) {
@@ -48,13 +48,13 @@ fun Route.inventoryRoutes() {
                 } catch (e: Exception) {
                     call.respond(
                         HttpStatusCode.InternalServerError,
-                        mapOf("error" to "Failed to create inventory batch: ${e.message}")
+                        mapOf("error" to "Failed to update product stock: ${e.message}")
                     )
                 }
             }
 
-            // GET /api/v1/inventory/batches - internal roles only
-            get("/batches") {
+            // GET /api/v1/inventory/stock - internal roles only
+            get("/stock") {
                 try {
                     call.requireInternalAccess()
 
@@ -72,7 +72,7 @@ fun Route.inventoryRoutes() {
                         )
                     }
 
-                    val batches = inventoryService.getBatches(
+                    val stockEntries = inventoryService.getStockEntries(
                         productId = productId,
                         expired = expired,
                         expWithinDays = expWithinDays,
@@ -84,18 +84,18 @@ fun Route.inventoryRoutes() {
                     call.respond(
                         HttpStatusCode.OK,
                         mapOf(
-                            "data" to batches,
+                            "data" to stockEntries,
                             "pagination" to mapOf(
                                 "page" to page,
                                 "limit" to limit
                             ),
-                            "message" to "Get inventory batches successfully"
+                            "message" to "Get product stock entries successfully"
                         )
                     )
                 } catch (e: Exception) {
                     call.respond(
                         HttpStatusCode.InternalServerError,
-                        mapOf("error" to "Failed to get inventory batches: ${e.message}")
+                        mapOf("error" to "Failed to get product stock entries: ${e.message}")
                     )
                 }
             }
@@ -114,20 +114,20 @@ fun Route.inventoryRoutes() {
                         )
                     }
 
-                    val alerts = inventoryService.getExpiringBatches(days)
+                    val alerts = inventoryService.getExpiringStockAlerts(days)
 
                     call.respond(
                         HttpStatusCode.OK,
                         mapOf(
                             "data" to alerts,
                             "alertDays" to days,
-                            "message" to "Get expiring batches successfully"
+                            "message" to "Get expiring products successfully"
                         )
                     )
                 } catch (e: Exception) {
                     call.respond(
                         HttpStatusCode.InternalServerError,
-                        mapOf("error" to "Failed to get expiring batches: ${e.message}")
+                        mapOf("error" to "Failed to get expiring products: ${e.message}")
                     )
                 }
             }

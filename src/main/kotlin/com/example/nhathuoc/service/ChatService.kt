@@ -2,6 +2,8 @@ package com.example.nhathuoc.service
 
 import com.example.nhathuoc.database.tables.ChatMessagesTable
 import com.example.nhathuoc.database.tables.ChatSessionsTable
+import com.example.nhathuoc.database.tables.EmployeeProfilesTable
+import com.example.nhathuoc.database.tables.ProductImagesTable
 import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.util.AppRoles
@@ -23,10 +25,26 @@ import java.util.UUID
 data class ChatSessionDto(
     val id: String,
     val userId: String,
+    val userName: String? = null,
+    val userPhone: String? = null,
+    val userEmail: String? = null,
     val productId: String? = null,
     val status: String,
     val createdAt: String,
-    val lastMessage: ChatMessageDto? = null
+    val lastMessage: ChatMessageDto? = null,
+    val productName: String? = null,
+    val productImageUrl: String? = null,
+    val productPrice: Double? = null,
+    val productUnit: String? = null,
+    val consultantId: String? = null,
+    val consultantName: String? = null,
+    val consultantRole: String? = null,
+    val consultantQualificationTitle: String? = null,
+    val consultantQualificationSpecialty: String? = null,
+    val consultantQualificationInstitution: String? = null,
+    val consultantQualificationDocumentUrl: String? = null,
+    val consultantQualificationDocumentType: String? = null,
+    val consultantVerified: Boolean? = null
 )
 
 @Serializable
@@ -185,6 +203,17 @@ class ChatService {
             val session = requireActiveSession(sessionId)
             val sender = requireUser(senderId)
             val senderRole = sender[UsersTable.role]
+            val normalizedType = normalizeMessageType(type)
+
+            if (senderRole == AppRoles.ADMIN) {
+                throw IllegalStateException("Admin chỉ được giám sát phiên tư vấn, không được trực tiếp trả lời khách.")
+            }
+            if (senderRole == AppRoles.EMPLOYEE) {
+                val assignedConsultant = getAssignedConsultantInternal(sessionId)
+                if (assignedConsultant != null && assignedConsultant.id != senderId) {
+                    throw IllegalStateException("Phiên tư vấn đã được phụ trách bởi ${assignedConsultant.name}.")
+                }
+            }
 
             val messageId = UUID.randomUUID().toString()
             ChatMessagesTable.insert {
@@ -192,7 +221,7 @@ class ChatService {
                 it[ChatMessagesTable.sessionId] = sessionId
                 it[ChatMessagesTable.senderId] = senderId
                 it[ChatMessagesTable.content] = content.trim()
-                it[ChatMessagesTable.type] = type
+                it[ChatMessagesTable.type] = normalizedType
                 it[ChatMessagesTable.metadata] = metadata
             }
 
@@ -237,11 +266,25 @@ class ChatService {
         }
     }
 
-    fun assignSession(sessionId: String): ChatSessionDto {
+    fun assignSession(sessionId: String, staffId: String? = null): ChatSessionDto {
         return transaction {
             val session = getSessionRowOrThrow(sessionId)
             if (session[ChatSessionsTable.status] == SESSION_STATUS_RESOLVED) {
                 throw IllegalStateException("Chat session is no longer active")
+            }
+            if (!staffId.isNullOrBlank()) {
+                val staff = requireUser(staffId)
+                val role = staff[UsersTable.role]
+                if (role == AppRoles.ADMIN) {
+                    throw IllegalStateException("Admin chỉ được xem và giám sát, không được nhận phiên tư vấn.")
+                }
+                if (role != AppRoles.EMPLOYEE) {
+                    throw IllegalStateException("Chỉ nhân viên chuyên môn được nhận phiên tư vấn.")
+                }
+                val assignedConsultant = getAssignedConsultantInternal(sessionId)
+                if (assignedConsultant != null && assignedConsultant.id != staffId) {
+                    throw IllegalStateException("Phiên tư vấn đã được phụ trách bởi ${assignedConsultant.name}.")
+                }
             }
 
             ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
@@ -268,13 +311,32 @@ class ChatService {
     }
 
     private fun mapSession(row: ResultRow, lastMessage: ChatMessageDto? = null): ChatSessionDto {
+        val product = row[ChatSessionsTable.productId]?.let(::getProductSnapshotInternal)
+        val customer = getCustomerSnapshotInternal(row[ChatSessionsTable.userId])
+        val consultant = getAssignedConsultantInternal(row[ChatSessionsTable.id])
         return ChatSessionDto(
             id = row[ChatSessionsTable.id],
             userId = row[ChatSessionsTable.userId],
+            userName = customer?.name,
+            userPhone = customer?.phone,
+            userEmail = customer?.email,
             productId = row[ChatSessionsTable.productId],
             status = row[ChatSessionsTable.status],
             createdAt = row[ChatSessionsTable.createdAt].toString(),
-            lastMessage = lastMessage
+            lastMessage = lastMessage,
+            productName = product?.name,
+            productImageUrl = product?.imageUrl,
+            productPrice = product?.price,
+            productUnit = product?.unit,
+            consultantId = consultant?.id,
+            consultantName = consultant?.name,
+            consultantRole = consultant?.role,
+            consultantQualificationTitle = consultant?.qualificationTitle,
+            consultantQualificationSpecialty = consultant?.qualificationSpecialty,
+            consultantQualificationInstitution = consultant?.qualificationInstitution,
+            consultantQualificationDocumentUrl = consultant?.qualificationDocumentUrl,
+            consultantQualificationDocumentType = consultant?.qualificationDocumentType,
+            consultantVerified = consultant?.verified
         )
     }
 
@@ -294,6 +356,15 @@ class ChatService {
             metadata = row[ChatMessagesTable.metadata],
             createdAt = row[ChatMessagesTable.createdAt].toString()
         )
+    }
+
+    private fun normalizeMessageType(type: String): String {
+        val normalized = type.trim().uppercase()
+        return when (normalized) {
+            "PRODUCT_RECOMMENDATION" -> MESSAGE_TYPE_PRODUCT_CARD
+            "" -> MESSAGE_TYPE_TEXT
+            else -> normalized.take(20)
+        }
     }
 
     private fun getSessionRowOrThrow(sessionId: String): ResultRow {
@@ -353,11 +424,114 @@ class ChatService {
         ).selectAll()
     }
 
+    private data class ChatProductSnapshot(
+        val name: String,
+        val imageUrl: String?,
+        val price: Double,
+        val unit: String
+    )
+
+    private data class ChatCustomerSnapshot(
+        val name: String?,
+        val phone: String?,
+        val email: String?
+    )
+
+    private data class AssignedConsultant(
+        val id: String,
+        val name: String,
+        val role: String,
+        val qualificationTitle: String?,
+        val qualificationSpecialty: String?,
+        val qualificationInstitution: String?,
+        val qualificationDocumentUrl: String?,
+        val qualificationDocumentType: String?,
+        val verified: Boolean?
+    )
+
+    private fun getProductSnapshotInternal(productId: String): ChatProductSnapshot? {
+        return ProductsTable
+            .join(
+                ProductImagesTable,
+                JoinType.LEFT,
+                additionalConstraint = { ProductsTable.id eq ProductImagesTable.productId }
+            )
+            .selectAll()
+            .where { ProductsTable.id eq productId }
+            .orderBy(ProductImagesTable.sortOrder, SortOrder.ASC)
+            .limit(1)
+            .singleOrNull()
+            ?.let { row ->
+                ChatProductSnapshot(
+                    name = row[ProductsTable.name],
+                    imageUrl = row.getOrNull(ProductImagesTable.url),
+                    price = row[ProductsTable.price].toDouble(),
+                    unit = row[ProductsTable.unit]
+                )
+            }
+    }
+
+    private fun getCustomerSnapshotInternal(userId: String): ChatCustomerSnapshot? {
+        return UsersTable
+            .selectAll()
+            .where { UsersTable.id eq userId }
+            .singleOrNull()
+            ?.let { row ->
+                val fullName = row[UsersTable.fullName]?.takeIf { it.isNotBlank() }
+                val phone = row[UsersTable.phone].takeIf { it.isNotBlank() }
+                val email = row[UsersTable.email]?.takeIf { it.isNotBlank() }
+                ChatCustomerSnapshot(
+                    name = fullName ?: phone ?: email,
+                    phone = phone,
+                    email = email
+                )
+            }
+    }
+
+    private fun getAssignedConsultantInternal(sessionId: String): AssignedConsultant? {
+        return ChatMessagesTable
+            .join(
+                UsersTable,
+                JoinType.INNER,
+                additionalConstraint = { ChatMessagesTable.senderId eq UsersTable.id }
+            )
+            .join(
+                EmployeeProfilesTable,
+                JoinType.LEFT,
+                additionalConstraint = { UsersTable.id eq EmployeeProfilesTable.userId }
+            )
+            .selectAll()
+            .where {
+                (ChatMessagesTable.sessionId eq sessionId) and
+                    (UsersTable.role eq AppRoles.EMPLOYEE)
+            }
+            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
+            .limit(1)
+            .singleOrNull()
+            ?.let { row ->
+                val fullName = row.getOrNull(UsersTable.fullName)
+                val email = row.getOrNull(UsersTable.email)
+                val phone = row.getOrNull(UsersTable.phone)
+                AssignedConsultant(
+                    id = row[UsersTable.id],
+                    name = fullName ?: email ?: phone ?: "Nhân viên chuyên môn",
+                    role = row[UsersTable.role],
+                    qualificationTitle = row.getOrNull(EmployeeProfilesTable.qualificationTitle),
+                    qualificationSpecialty = row.getOrNull(EmployeeProfilesTable.qualificationSpecialty),
+                    qualificationInstitution = row.getOrNull(EmployeeProfilesTable.qualificationInstitution),
+                    qualificationDocumentUrl = row.getOrNull(EmployeeProfilesTable.qualificationDocumentUrl),
+                    qualificationDocumentType = row.getOrNull(EmployeeProfilesTable.qualificationDocumentType),
+                    verified = row.getOrNull(EmployeeProfilesTable.qualificationVerified)
+                )
+            }
+    }
+
     companion object {
         const val SESSION_STATUS_PENDING = "PENDING"
         const val SESSION_STATUS_ASSIGNED = "ASSIGNED"
         const val SESSION_STATUS_RESOLVED = "RESOLVED"
         const val MESSAGE_TYPE_TEXT = "TEXT"
+        const val MESSAGE_TYPE_PRODUCT_CARD = "PRODUCT_CARD"
 
         val ACTIVE_SESSION_STATUSES = setOf(
             SESSION_STATUS_PENDING,

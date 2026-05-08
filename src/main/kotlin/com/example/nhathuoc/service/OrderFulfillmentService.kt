@@ -1,29 +1,32 @@
 package com.example.nhathuoc.service
 
-import com.example.nhathuoc.database.tables.*
-import org.jetbrains.exposed.sql.*
+import com.example.nhathuoc.database.tables.OrderItemsTable
+import com.example.nhathuoc.database.tables.OrdersTable
+import com.example.nhathuoc.database.tables.ProductsTable
+import kotlinx.datetime.LocalDate
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.util.*
+import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
 data class OrderFulfillmentResult(
     val orderId: String,
     val successful: Boolean,
     val message: String,
-    val allocatedBatches: List<OrderItemBatchAllocation>? = null
+    val allocatedStock: List<OrderItemStockAllocation>? = null
 )
 
-data class OrderItemBatchAllocation(
+data class OrderItemStockAllocation(
     val orderItemId: String,
     val productId: String,
     val productName: String,
     val requestedQuantity: Int,
-    val allocatedBatches: List<BatchAllocation>
+    val allocatedStock: List<StockAllocation>
 )
 
-data class BatchAllocation(
-    val batchId: String,
-    val lotNumber: String?,
-    val expDate: kotlinx.datetime.LocalDate?,
+data class StockAllocation(
+    val stockId: String,
+    val expDate: LocalDate?,
     val allocatedQuantity: Int
 )
 
@@ -31,33 +34,11 @@ class OrderFulfillmentService(
     private val inventoryService: InventoryService = InventoryService()
 ) {
 
-    /**
-     * Confirm and pack an order (internal desktop roles)
-     * This will:
-     * 1. Validate order status and ownership
-     * 2. Allocate inventory using FEFO
-     * 3. Update inventory quantities
-     * 4. Create order_item_batches records
-     * 5. Update order status to PROCESSING
-     */
     fun confirmPack(orderId: String, shopId: String): OrderFulfillmentResult {
         return transaction {
             try {
-                // 1. Validate order
-                val order = validateOrderForConfirmPack(orderId, shopId)
-
-                // 2. Get order items
-                val orderItems = OrderItemsTable
-                    .selectAll()
-                    .where { OrderItemsTable.orderId eq orderId }
-                    .map { row ->
-                        OrderItemInfo(
-                            id = row[OrderItemsTable.id],
-                            productId = row[OrderItemsTable.productId],
-                            quantity = row[OrderItemsTable.quantity],
-                            name = row[OrderItemsTable.name]
-                        )
-                    }
+                validateOrderForConfirmPack(orderId)
+                val orderItems = loadOrderItems(orderId)
 
                 if (orderItems.isEmpty()) {
                     return@transaction OrderFulfillmentResult(
@@ -67,51 +48,37 @@ class OrderFulfillmentService(
                     )
                 }
 
-                // 3. Allocate inventory for each order item
-                val allAllocations = mutableListOf<OrderItemBatchAllocation>()
-                val batchCommitments = mutableListOf<Pair<String, Int>>()
+                val allAllocations = mutableListOf<OrderItemStockAllocation>()
+                val stockCommitments = mutableListOf<Pair<String, Int>>()
 
                 for (orderItem in orderItems) {
-                    if (orderItem.productId == null) {
-                        // Skip items without product ID (might be custom items)
-                        continue
-                    }
-
+                    val productId = orderItem.productId ?: continue
                     try {
-                        val batchAllocations = inventoryService.allocateBatchesForProduct(
-                            productId = orderItem.productId,
+                        val allocations = inventoryService.reserveStockForProduct(
+                            productId = productId,
                             shopId = shopId,
                             totalQuantityNeeded = orderItem.quantity
                         )
+                        stockCommitments.addAll(allocations)
 
-                        // Convert to detailed allocation info
-                        val batchDetails = batchAllocations.map { (batchId, allocatedQuantity) ->
-                            val batchInfo = ProductBatchesTable
-                                .selectAll()
-                                .where { ProductBatchesTable.id eq batchId }
-                                .single()
+                        val product = ProductsTable
+                            .selectAll()
+                            .where { ProductsTable.id eq productId }
+                            .single()
 
-                            BatchAllocation(
-                                batchId = batchId,
-                                lotNumber = batchInfo[ProductBatchesTable.lotNumber],
-                                expDate = batchInfo[ProductBatchesTable.expDate],
-                                allocatedQuantity = allocatedQuantity
-                            )
-                        }
-
-                        allAllocations.add(
-                            OrderItemBatchAllocation(
-                                orderItemId = orderItem.id,
-                                productId = orderItem.productId,
-                                productName = orderItem.name,
-                                requestedQuantity = orderItem.quantity,
-                                allocatedBatches = batchDetails
-                            )
+                        allAllocations += OrderItemStockAllocation(
+                            orderItemId = orderItem.id,
+                            productId = productId,
+                            productName = orderItem.name,
+                            requestedQuantity = orderItem.quantity,
+                            allocatedStock = allocations.map { (allocatedProductId, allocatedQuantity) ->
+                                StockAllocation(
+                                    stockId = allocatedProductId,
+                                    expDate = product[ProductsTable.expDate],
+                                    allocatedQuantity = allocatedQuantity
+                                )
+                            }
                         )
-
-                        // Add to commitment list
-                        batchCommitments.addAll(batchAllocations)
-
                     } catch (e: IllegalStateException) {
                         return@transaction OrderFulfillmentResult(
                             orderId = orderId,
@@ -121,22 +88,8 @@ class OrderFulfillmentService(
                     }
                 }
 
-                // 4. Commit all batch allocations
-                inventoryService.commitBatchAllocations(batchCommitments)
+                inventoryService.commitStockReservations(stockCommitments)
 
-                // 5. Create order_item_batches records
-                for (allocation in allAllocations) {
-                    for (batchAllocation in allocation.allocatedBatches) {
-                        OrderItemBatchesTable.insert {
-                            it[OrderItemBatchesTable.id] = UUID.randomUUID().toString()
-                            it[OrderItemBatchesTable.orderItemId] = allocation.orderItemId
-                            it[OrderItemBatchesTable.batchId] = batchAllocation.batchId
-                            it[OrderItemBatchesTable.quantity] = batchAllocation.allocatedQuantity
-                        }
-                    }
-                }
-
-                // 6. Update order status
                 OrdersTable.update({ OrdersTable.id eq orderId }) {
                     it[OrdersTable.status] = "PROCESSING"
                 }
@@ -145,11 +98,9 @@ class OrderFulfillmentService(
                     orderId = orderId,
                     successful = true,
                     message = "Order confirmed and packed successfully",
-                    allocatedBatches = allAllocations
+                    allocatedStock = allAllocations
                 )
-
             } catch (e: Exception) {
-                // Transaction will be rolled back automatically
                 OrderFulfillmentResult(
                     orderId = orderId,
                     successful = false,
@@ -159,17 +110,13 @@ class OrderFulfillmentService(
         }
     }
 
-    /**
-     * Validate order for confirm-pack operation
-     */
-    private fun validateOrderForConfirmPack(orderId: String, shopId: String): OrderInfo {
+    private fun validateOrderForConfirmPack(orderId: String): OrderInfo {
         val order = OrdersTable
             .selectAll()
             .where { OrdersTable.id eq orderId }
             .singleOrNull()
             ?: throw IllegalArgumentException("Order not found")
 
-        // Check order status
         val currentStatus = order[OrdersTable.status]
         if (currentStatus != "PENDING") {
             throw IllegalArgumentException("Order status must be PENDING to confirm pack. Current status: $currentStatus")
@@ -181,54 +128,59 @@ class OrderFulfillmentService(
         )
     }
 
-    /**
-     * Get order fulfillment details (for viewing batch allocations)
-     */
-    fun getOrderFulfillmentDetails(orderId: String, shopId: String): List<OrderItemBatchAllocation> {
+    fun getOrderFulfillmentDetails(orderId: String, shopId: String): List<OrderItemStockAllocation> {
         return transaction {
-            // Validate order ownership
-            validateOrderForConfirmPack(orderId, shopId)
-
-            // Get order item batch allocations
-            val allocations = OrderItemsTable
-                .join(OrderItemBatchesTable, JoinType.LEFT) {
-                    OrderItemsTable.id eq OrderItemBatchesTable.orderItemId
-                }
-                .join(ProductBatchesTable, JoinType.LEFT) {
-                    OrderItemBatchesTable.batchId eq ProductBatchesTable.id
-                }
+            OrdersTable
                 .selectAll()
-                .where { OrderItemsTable.orderId eq orderId }
-                .groupBy { it[OrderItemsTable.id] }
-                .map { (orderItemId, rows) ->
-                    val firstRow = rows.first()
-                    val batchAllocations = rows.mapNotNull { row ->
-                        val batchId = row[OrderItemBatchesTable.batchId]
-                        if (batchId != null) {
-                            BatchAllocation(
-                                batchId = batchId,
-                                lotNumber = row[ProductBatchesTable.lotNumber],
-                                expDate = row[ProductBatchesTable.expDate],
-                                allocatedQuantity = row[OrderItemBatchesTable.quantity] ?: 0
-                            )
-                        } else null
-                    }
+                .where { OrdersTable.id eq orderId }
+                .singleOrNull()
+                ?: throw IllegalArgumentException("Order not found")
 
-                    OrderItemBatchAllocation(
-                        orderItemId = orderItemId,
-                        productId = firstRow[OrderItemsTable.productId] ?: "",
-                        productName = firstRow[OrderItemsTable.name],
-                        requestedQuantity = firstRow[OrderItemsTable.quantity],
-                        allocatedBatches = batchAllocations
-                    )
+            loadOrderItems(orderId).map { orderItem ->
+                val productId = orderItem.productId
+                val product = productId?.let {
+                    ProductsTable
+                        .selectAll()
+                        .where { ProductsTable.id eq it }
+                        .singleOrNull()
                 }
 
-            allocations
+                OrderItemStockAllocation(
+                    orderItemId = orderItem.id,
+                    productId = productId ?: "",
+                    productName = orderItem.name,
+                    requestedQuantity = orderItem.quantity,
+                    allocatedStock = if (productId != null) {
+                        listOf(
+                            StockAllocation(
+                                stockId = productId,
+                                expDate = product?.get(ProductsTable.expDate),
+                                allocatedQuantity = orderItem.quantity
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
+                )
+            }
         }
+    }
+
+    private fun loadOrderItems(orderId: String): List<OrderItemInfo> {
+        return OrderItemsTable
+            .selectAll()
+            .where { OrderItemsTable.orderId eq orderId }
+            .map { row ->
+                OrderItemInfo(
+                    id = row[OrderItemsTable.id],
+                    productId = row[OrderItemsTable.productId],
+                    quantity = row[OrderItemsTable.quantity],
+                    name = row[OrderItemsTable.name]
+                )
+            }
     }
 }
 
-// Data classes for internal use
 private data class OrderInfo(
     val id: String,
     val status: String

@@ -116,13 +116,18 @@ fun Route.internalChatRoutes() {
 
             patch("/sessions/{id}/assign") {
                 try {
-                    call.requireInternalAccess()
+                    val (principal, _) = call.requireInternalAccess()
+                    val staffId = principal.getUserId()
+                        ?: return@patch call.respond(
+                            HttpStatusCode.Unauthorized,
+                            RouteErrorResponse("User ID not found")
+                        )
                     val sessionId = call.parameters["id"]
                         ?: return@patch call.respond(
                             HttpStatusCode.BadRequest,
                             RouteErrorResponse("Session ID is required")
                         )
-                    val session = chatService.assignSession(sessionId)
+                    val session = chatService.assignSession(sessionId, staffId)
                     call.respond(
                         HttpStatusCode.OK,
                         RouteDataMessageResponse(

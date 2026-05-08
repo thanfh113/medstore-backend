@@ -219,7 +219,8 @@ private data class PreparedMoMoPayment(
 private data class CreatedMoMoPayment(
     val paymentUrl: String,
     val qrContent: String,
-    val deeplink: String?
+    val deeplink: String?,
+    val gatewayResponseJson: String
 )
 
 private data class PendingPosGatewayPayment(
@@ -249,6 +250,7 @@ private data class VNPayQueryResult(
 
 class PaymentService {
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
+    private val orderLifecycleService = OrderLifecycleService()
     private val gatewayHttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(30))
         .build()
@@ -355,14 +357,28 @@ class PaymentService {
                 orderInfo = "Thanh toan don hang ${order[OrdersTable.orderCode]}"
             )
         }
-        val createdPayment = createMoMoPayment(prepared)
+        val reusablePayment = transaction {
+            val existingPayment = findLatestPayment(prepared.internalOrderId, "MOMO")
+            if (existingPayment != null && existingPayment[PaymentsTable.status] != "COMPLETED") {
+                buildReusableMoMoResponse(existingPayment)?.also {
+                    markOrderPaymentPending(prepared.internalOrderId, "MOMO")
+                }
+            } else {
+                null
+            }
+        }
+        if (reusablePayment != null) {
+            return reusablePayment
+        }
 
+        val createdPayment = createMoMoPayment(prepared)
         transaction {
             upsertPendingPayment(
                 orderId = prepared.internalOrderId,
                 method = "MOMO",
                 amount = BigDecimal(prepared.amount),
-                transactionId = prepared.requestId
+                transactionId = prepared.requestId,
+                gatewayResponse = createdPayment.gatewayResponseJson
             )
             markOrderPaymentPending(prepared.internalOrderId, "MOMO")
         }
@@ -544,6 +560,23 @@ class PaymentService {
                             redirectUrl = finalReturnUrl,
                             orderInfo = "Thanh toan POS $orderCode"
                         )
+                        val existingPayment = findLatestPayment(orderId, "MOMO")
+                        if (existingPayment != null && existingPayment[PaymentsTable.status] != "COMPLETED") {
+                            val reusable = buildReusableMoMoResponse(existingPayment)
+                            if (reusable != null) {
+                                markOrderPaymentPending(orderId, "MOMO")
+                                return@transaction PosGatewayPaymentResponse(
+                                    orderId = orderId,
+                                    orderCode = orderCode,
+                                    paymentMethod = "MOMO",
+                                    paymentUrl = reusable.paymentUrl,
+                                    qrContent = reusable.qrContent ?: reusable.paymentUrl,
+                                    paymentReference = reusable.requestId,
+                                    amount = amount,
+                                    status = "PENDING"
+                                )
+                            }
+                        }
                         println("DEBUG: Created MoMo payment request - requestId=${prepared.requestId}")
                         val createdPayment = createMoMoPayment(prepared)
                         println("DEBUG: MoMo response received - qrUrl=${createdPayment.qrContent?.take(50)}")
@@ -552,7 +585,8 @@ class PaymentService {
                             orderId = orderId,
                             method = "MOMO",
                             amount = BigDecimal(amount),
-                            transactionId = prepared.requestId
+                            transactionId = prepared.requestId,
+                            gatewayResponse = createdPayment.gatewayResponseJson
                         )
                         markOrderPaymentPending(orderId, "MOMO")
 
@@ -1360,7 +1394,8 @@ class PaymentService {
         return CreatedMoMoPayment(
             paymentUrl = payUrl,
             qrContent = qrContent,
-            deeplink = deeplink
+            deeplink = deeplink,
+            gatewayResponseJson = response.body()
         )
     }
 
@@ -1497,7 +1532,9 @@ class PaymentService {
                 it[PaymentsTable.amount] = amount
                 it[PaymentsTable.transactionId] = transactionId
                 it[PaymentsTable.status] = "PENDING"
-                it[PaymentsTable.paymentGatewayResponse] = gatewayResponse
+                if (gatewayResponse != null) {
+                    it[PaymentsTable.paymentGatewayResponse] = gatewayResponse
+                }
                 it[PaymentsTable.paidAt] = null
             }
             existing[PaymentsTable.id]
@@ -1509,10 +1546,41 @@ class PaymentService {
                 it[PaymentsTable.method] = method
                 it[PaymentsTable.amount] = amount
                 it[PaymentsTable.transactionId] = transactionId
-                it[PaymentsTable.paymentGatewayResponse] = gatewayResponse
                 it[status] = "PENDING"
+                if (gatewayResponse != null) {
+                    it[PaymentsTable.paymentGatewayResponse] = gatewayResponse
+                }
             }
             paymentId
+        }
+    }
+
+    private fun buildReusableMoMoResponse(payment: ResultRow): MoMoResponse? {
+        val rawGatewayResponse = payment[PaymentsTable.paymentGatewayResponse]?.takeIf { it.isNotBlank() }
+            ?: return null
+        return try {
+            val gatewayResponse = json.decodeFromString<MoMoCreateGatewayResponse>(rawGatewayResponse)
+            if (gatewayResponse.resultCode != 0) {
+                return null
+            }
+            val paymentUrl = gatewayResponse.payUrl?.takeIf { it.isNotBlank() } ?: return null
+            val requestId = gatewayResponse.requestId?.takeIf { it.isNotBlank() }
+                ?: payment[PaymentsTable.transactionId]
+                ?: return null
+            val amount = gatewayResponse.amount ?: normalizePaymentAmount(payment[PaymentsTable.amount])
+            val qrContent = gatewayResponse.qrCodeUrl?.takeIf { it.isNotBlank() }
+                ?: gatewayResponse.deeplink?.takeIf { it.isNotBlank() }
+                ?: paymentUrl
+            MoMoResponse(
+                paymentUrl = paymentUrl,
+                requestId = requestId,
+                amount = amount,
+                status = "PENDING",
+                qrContent = qrContent,
+                deeplink = gatewayResponse.deeplink?.takeIf { it.isNotBlank() }
+            )
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -1576,6 +1644,11 @@ class PaymentService {
                 it[OrdersTable.completedAt] = completedAt
             }
         }
+        orderLifecycleService.notifyOrderStatusChanged(
+            order = order,
+            newStatus = if (isPosOrder) "DELIVERED" else "PROCESSING",
+            paymentStatus = "COMPLETED"
+        )
 
         return true
     }

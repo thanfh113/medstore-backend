@@ -1,8 +1,5 @@
 package com.example.nhathuoc.service
 
-import com.example.nhathuoc.database.tables.ComplaintAttachmentsTable
-import com.example.nhathuoc.database.tables.ComplaintEventsTable
-import com.example.nhathuoc.database.tables.ComplaintMessagesTable
 import com.example.nhathuoc.database.tables.OrderComplaintsTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
@@ -13,6 +10,9 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -126,6 +126,10 @@ data class ComplaintDto(
 
 class ComplaintService {
     private val notificationService = NotificationService()
+    private val complaintJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     private val allowedTypes = setOf(
         "MISSING_ITEM", "WRONG_ITEM", "DAMAGED", "COUNTERFEIT",
@@ -188,7 +192,25 @@ class ComplaintService {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val complaintId = UUID.randomUUID().toString()
         val code = "CMP-${System.currentTimeMillis().toString().takeLast(9)}"
-
+        val attachments = request.attachments
+            .filter { it.fileUrl.isNotBlank() }
+            .map { attachment ->
+                ComplaintAttachmentDto(
+                    id = UUID.randomUUID().toString(),
+                    fileUrl = attachment.fileUrl.trim(),
+                    fileType = attachment.fileType.ifBlank { "IMAGE" },
+                    publicId = attachment.publicId?.ifBlank { null },
+                    createdAt = now.toString()
+                )
+            }
+        val initialMessage = ComplaintMessageDto(
+            id = UUID.randomUUID().toString(),
+            senderUserId = userId,
+            senderRole = "USER",
+            message = request.description.trim(),
+            isInternal = false,
+            createdAt = now.toString()
+        )
         OrderComplaintsTable.insert {
             it[id] = complaintId
             it[complaintCode] = code
@@ -199,32 +221,15 @@ class ComplaintService {
             it[type] = normalizedType
             it[title] = request.title.trim()
             it[description] = request.description.trim()
+            it[attachmentsJson] = encodeList(attachments)
+            it[messagesJson] = encodeList(listOf(initialMessage))
+            it[eventsJson] = null
             it[status] = "OPEN"
             it[priority] = "NORMAL"
             it[createdAt] = now
             it[updatedAt] = now
         }
 
-        request.attachments.filter { it.fileUrl.isNotBlank() }.forEach { attachment ->
-            ComplaintAttachmentsTable.insert {
-                it[id] = UUID.randomUUID().toString()
-                it[ComplaintAttachmentsTable.complaintId] = complaintId
-                it[fileUrl] = attachment.fileUrl
-                it[fileType] = attachment.fileType.ifBlank { "IMAGE" }
-                it[cloudinaryPublicId] = attachment.publicId?.ifBlank { null }
-                it[createdAt] = now
-            }
-        }
-
-        ComplaintMessagesTable.insert {
-            it[id] = UUID.randomUUID().toString()
-            it[ComplaintMessagesTable.complaintId] = complaintId
-            it[senderUserId] = userId
-            it[senderRole] = "USER"
-            it[message] = request.description.trim()
-            it[isInternal] = false
-            it[createdAt] = now
-        }
         insertComplaintEvent(
             complaintId = complaintId,
             actorUserId = userId,
@@ -457,15 +462,15 @@ class ComplaintService {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val messageId = UUID.randomUUID().toString()
         val normalizedRole = senderRole.trim().uppercase().ifBlank { "USER" }
-        ComplaintMessagesTable.insert {
-            it[id] = messageId
-            it[ComplaintMessagesTable.complaintId] = complaintId
-            it[ComplaintMessagesTable.senderUserId] = senderUserId
-            it[ComplaintMessagesTable.senderRole] = normalizedRole
-            it[message] = request.message.trim()
-            it[isInternal] = request.isInternal && !userScoped
-            it[createdAt] = now
-        }
+        val message = ComplaintMessageDto(
+            id = messageId,
+            senderUserId = senderUserId,
+            senderRole = normalizedRole,
+            message = request.message.trim(),
+            isInternal = request.isInternal && !userScoped,
+            createdAt = now.toString()
+        )
+        appendComplaintMessage(complaintId, message)
         insertComplaintEvent(
             complaintId = complaintId,
             actorUserId = senderUserId,
@@ -489,11 +494,7 @@ class ComplaintService {
                 refId = complaintId
             )
         }
-        ComplaintMessagesTable
-            .selectAll()
-            .where { ComplaintMessagesTable.id eq messageId }
-            .single()
-            .toMessageDto(senderName = null)
+        message
     }
 
     private fun resolveComplaintProductId(orderId: String, orderItemId: String?, requestedProductId: String?): String? {
@@ -513,56 +514,42 @@ class ComplaintService {
         includeMessages: Boolean,
         includeInternalMessages: Boolean
     ): List<ComplaintDto> {
-        val complaintIds = rows.map { it[OrderComplaintsTable.id] }
-        val attachmentsByComplaintId = if (complaintIds.isEmpty()) {
-            emptyMap()
-        } else {
-            ComplaintAttachmentsTable.selectAll()
-                .where { ComplaintAttachmentsTable.complaintId inList complaintIds }
-                .map { attachment ->
-                    attachment[ComplaintAttachmentsTable.complaintId] to ComplaintAttachmentDto(
-                        id = attachment[ComplaintAttachmentsTable.id],
-                        fileUrl = attachment[ComplaintAttachmentsTable.fileUrl],
-                        fileType = attachment[ComplaintAttachmentsTable.fileType],
-                        publicId = attachment[ComplaintAttachmentsTable.cloudinaryPublicId],
-                        createdAt = attachment[ComplaintAttachmentsTable.createdAt].toString()
-                    )
-                }
-                .groupBy({ it.first }, { it.second })
+        val attachmentsByComplaintId = rows.associate { row ->
+            row[OrderComplaintsTable.id] to decodeList<ComplaintAttachmentDto>(row[OrderComplaintsTable.attachmentsJson])
         }
 
-        val messagesByComplaintId = if (!includeMessages || complaintIds.isEmpty()) {
+        val rawMessagesByComplaintId = if (!includeMessages) {
             emptyMap()
         } else {
-            val messageRows = ComplaintMessagesTable.selectAll()
-                .where { ComplaintMessagesTable.complaintId inList complaintIds }
-                .orderBy(ComplaintMessagesTable.createdAt to SortOrder.ASC)
-                .toList()
-                .filter { includeInternalMessages || !it[ComplaintMessagesTable.isInternal] }
-            val senderIds = messageRows.map { it[ComplaintMessagesTable.senderUserId] }.distinct()
-            val senderNames = if (senderIds.isEmpty()) emptyMap() else UsersTable.selectAll()
-                .where { UsersTable.id inList senderIds }
-                .associate { it[UsersTable.id] to it[UsersTable.fullName] }
-            messageRows
-                .map { row -> row[ComplaintMessagesTable.complaintId] to row.toMessageDto(senderNames[row[ComplaintMessagesTable.senderUserId]]) }
-                .groupBy({ it.first }, { it.second })
+            rows.associate { row ->
+                row[OrderComplaintsTable.id] to decodeList<ComplaintMessageDto>(row[OrderComplaintsTable.messagesJson])
+                    .filter { includeInternalMessages || !it.isInternal }
+                    .sortedBy { it.createdAt }
+            }
+        }
+        val senderIds = rawMessagesByComplaintId.values.flatten().map { it.senderUserId }.distinct()
+        val senderNames = if (senderIds.isEmpty()) emptyMap() else UsersTable.selectAll()
+            .where { UsersTable.id inList senderIds }
+            .associate { it[UsersTable.id] to it[UsersTable.fullName] }
+        val messagesByComplaintId = rawMessagesByComplaintId.mapValues { (_, messages) ->
+            messages.map { it.copy(senderName = senderNames[it.senderUserId]) }
         }
 
-        val eventsByComplaintId = if (!includeMessages || complaintIds.isEmpty()) {
+        val rawEventsByComplaintId = if (!includeMessages) {
             emptyMap()
         } else {
-            val eventRows = ComplaintEventsTable.selectAll()
-                .where { ComplaintEventsTable.complaintId inList complaintIds }
-                .orderBy(ComplaintEventsTable.createdAt to SortOrder.ASC)
-                .toList()
-                .filter { includeInternalMessages || it[ComplaintEventsTable.eventType] != "INTERNAL_NOTE" }
-            val actorIds = eventRows.mapNotNull { it[ComplaintEventsTable.actorUserId] }.distinct()
-            val actorNames = if (actorIds.isEmpty()) emptyMap() else UsersTable.selectAll()
-                .where { UsersTable.id inList actorIds }
-                .associate { it[UsersTable.id] to it[UsersTable.fullName] }
-            eventRows
-                .map { row -> row[ComplaintEventsTable.complaintId] to row.toEventDto(actorNames[row[ComplaintEventsTable.actorUserId]]) }
-                .groupBy({ it.first }, { it.second })
+            rows.associate { row ->
+                row[OrderComplaintsTable.id] to decodeList<ComplaintEventDto>(row[OrderComplaintsTable.eventsJson])
+                    .filter { includeInternalMessages || it.eventType != "INTERNAL_NOTE" }
+                    .sortedBy { it.createdAt }
+            }
+        }
+        val actorIds = rawEventsByComplaintId.values.flatten().mapNotNull { it.actorUserId }.distinct()
+        val actorNames = if (actorIds.isEmpty()) emptyMap() else UsersTable.selectAll()
+            .where { UsersTable.id inList actorIds }
+            .associate { it[UsersTable.id] to it[UsersTable.fullName] }
+        val eventsByComplaintId = rawEventsByComplaintId.mapValues { (_, events) ->
+            events.map { event -> event.copy(actorName = event.actorUserId?.let { actorNames[it] }) }
         }
 
         val userIds = rows.map { it[OrderComplaintsTable.userId] }.distinct()
@@ -658,21 +645,55 @@ class ComplaintService {
         dueAt: kotlinx.datetime.LocalDateTime? = null,
         createdAt: kotlinx.datetime.LocalDateTime
     ) {
-        ComplaintEventsTable.insert {
-            it[id] = UUID.randomUUID().toString()
-            it[ComplaintEventsTable.complaintId] = complaintId
-            it[ComplaintEventsTable.actorUserId] = actorUserId
-            it[ComplaintEventsTable.actorRole] = actorRole
-            it[ComplaintEventsTable.eventType] = eventType
-            it[ComplaintEventsTable.title] = title
-            it[ComplaintEventsTable.description] = description?.take(500)
-            it[ComplaintEventsTable.fromStatus] = fromStatus
-            it[ComplaintEventsTable.toStatus] = toStatus
-            it[ComplaintEventsTable.fromPriority] = fromPriority
-            it[ComplaintEventsTable.toPriority] = toPriority
-            it[ComplaintEventsTable.dueAt] = dueAt
-            it[ComplaintEventsTable.createdAt] = createdAt
+        appendComplaintEvent(
+            complaintId = complaintId,
+            event = ComplaintEventDto(
+                id = UUID.randomUUID().toString(),
+                actorUserId = actorUserId,
+                actorRole = actorRole,
+                eventType = eventType,
+                title = title,
+                description = description?.take(500),
+                fromStatus = fromStatus,
+                toStatus = toStatus,
+                fromPriority = fromPriority,
+                toPriority = toPriority,
+                dueAt = dueAt?.toString(),
+                createdAt = createdAt.toString()
+            )
+        )
+    }
+
+    private fun appendComplaintMessage(complaintId: String, message: ComplaintMessageDto) {
+        val existing = OrderComplaintsTable.selectAll()
+            .where { OrderComplaintsTable.id eq complaintId }
+            .singleOrNull()
+            ?: return
+        val messages = decodeList<ComplaintMessageDto>(existing[OrderComplaintsTable.messagesJson]) + message
+        OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
+            it[messagesJson] = encodeList(messages)
         }
+    }
+
+    private fun appendComplaintEvent(complaintId: String, event: ComplaintEventDto) {
+        val existing = OrderComplaintsTable.selectAll()
+            .where { OrderComplaintsTable.id eq complaintId }
+            .singleOrNull()
+            ?: return
+        val events = decodeList<ComplaintEventDto>(existing[OrderComplaintsTable.eventsJson]) + event
+        OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
+            it[eventsJson] = encodeList(events)
+        }
+    }
+
+    private inline fun <reified T> encodeList(items: List<T>): String? {
+        return items.takeIf { it.isNotEmpty() }?.let { complaintJson.encodeToString(it) }
+    }
+
+    private inline fun <reified T> decodeList(raw: String?): List<T> {
+        return raw?.takeIf { it.isNotBlank() }
+            ?.let { value -> runCatching { complaintJson.decodeFromString<List<T>>(value) }.getOrDefault(emptyList()) }
+            .orEmpty()
     }
 
     private fun calculateDueAt(
@@ -698,35 +719,5 @@ class ComplaintService {
                 nanosecond = it.nano
             )
         }
-    }
-
-    private fun ResultRow.toMessageDto(senderName: String?): ComplaintMessageDto {
-        return ComplaintMessageDto(
-            id = this[ComplaintMessagesTable.id],
-            senderUserId = this[ComplaintMessagesTable.senderUserId],
-            senderName = senderName,
-            senderRole = this[ComplaintMessagesTable.senderRole],
-            message = this[ComplaintMessagesTable.message],
-            isInternal = this[ComplaintMessagesTable.isInternal],
-            createdAt = this[ComplaintMessagesTable.createdAt].toString()
-        )
-    }
-
-    private fun ResultRow.toEventDto(actorName: String?): ComplaintEventDto {
-        return ComplaintEventDto(
-            id = this[ComplaintEventsTable.id],
-            actorUserId = this[ComplaintEventsTable.actorUserId],
-            actorName = actorName,
-            actorRole = this[ComplaintEventsTable.actorRole],
-            eventType = this[ComplaintEventsTable.eventType],
-            title = this[ComplaintEventsTable.title],
-            description = this[ComplaintEventsTable.description],
-            fromStatus = this[ComplaintEventsTable.fromStatus],
-            toStatus = this[ComplaintEventsTable.toStatus],
-            fromPriority = this[ComplaintEventsTable.fromPriority],
-            toPriority = this[ComplaintEventsTable.toPriority],
-            dueAt = this[ComplaintEventsTable.dueAt]?.toString(),
-            createdAt = this[ComplaintEventsTable.createdAt].toString()
-        )
     }
 }

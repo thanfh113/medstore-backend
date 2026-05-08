@@ -13,7 +13,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 private data class RewardRedeemResultResponse(
-    val redemptionId: String
+    val redemptionId: String,
+    val rewardType: String,
+    val status: String,
+    val issuedVoucherCode: String? = null
 )
 
 fun Route.rewardRoutes() {
@@ -190,13 +193,22 @@ fun Route.rewardRoutes() {
                         )
 
                     val request = call.receive<RedeemRewardRequest>()
-                    val redemptionId = rewardService.redeemReward(userId, request)
+                    val result = rewardService.redeemReward(userId, request)
 
                     call.respond(
                         HttpStatusCode.Created,
                         RouteDataMessageResponse(
-                            data = RewardRedeemResultResponse(redemptionId),
-                            message = "Reward redeemed successfully"
+                            data = RewardRedeemResultResponse(
+                                redemptionId = result.redemptionId,
+                                rewardType = result.rewardType,
+                                status = result.status,
+                                issuedVoucherCode = result.issuedVoucherCode
+                            ),
+                            message = if (result.rewardType == "VOUCHER") {
+                                "Voucher đã được đổi thành công và có thể dùng ngay"
+                            } else {
+                                "Đã gửi yêu cầu đổi quà, cửa hàng sẽ xử lý"
+                            }
                         )
                     )
                 } catch (e: IllegalArgumentException) {

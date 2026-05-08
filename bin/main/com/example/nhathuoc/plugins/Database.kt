@@ -38,20 +38,13 @@ fun Application.configureDatabase() {
             UsersTable,
             RefreshTokensTable,
             UserVerificationTokensTable,
-            UserPushTokensTable,
-            UserAccountActionsTable,
             EmployeeProfilesTable,
-
-            // Shop & business tables
-            PharmacyBranchesTable,
 
             // Product & category tables
             CategoriesTable,
             ProductsTable,
             ProductImagesTable,
             ProductCertificatesTable,
-            ProductDeleteRequestsTable,
-            ProductDiseasesTable,
 
             // Order & cart tables
             CartItemsTable,
@@ -60,7 +53,6 @@ fun Application.configureDatabase() {
             OrderItemsTable,
             CouponsTable,
             CouponRedemptionsTable,
-            PrescriptionsTable,
 
             // Reward system tables
             RewardAccountsTable,
@@ -71,38 +63,16 @@ fun Application.configureDatabase() {
             // Chat & AI tables
             ChatSessionsTable,
             ChatMessagesTable,
-            AiConversationsTable,
             ReviewsTable,
-            ReviewAttachmentsTable,
             ReviewReportsTable,
             OrderComplaintsTable,
-            ComplaintAttachmentsTable,
-            ComplaintMessagesTable,
-            ComplaintEventsTable,
             NotificationsTable,
 
             // CMS & content tables
             BannersTable,
-            HealthArticlesTable,
-            DiseaseCategoriesTable,
-            AiChatbotSettingsTable,
 
             // Payment tables
-            PaymentMethodsTable,
-            PaymentsTable,
-            ExpenseCategoriesTable,
-            ExpensesTable,
-
-            // Dynamic schema & inventory tables
-            CategoryAttributesTable,
-            ProductAttributeValuesTable,
-            ProductBatchesTable,
-            OrderItemBatchesTable,
-
-            // Offline sync foundation
-            SyncChangesTable,
-            SyncCheckpointsTable,
-            SyncJobsTable
+            PaymentsTable
         )
 
         migrateRefreshTokensTable()

@@ -3,7 +3,8 @@ package com.example.nhathuoc.service
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.ProductsTable
-import com.example.nhathuoc.database.tables.ReviewAttachmentsTable
+import com.example.nhathuoc.database.tables.RewardAccountsTable
+import com.example.nhathuoc.database.tables.RewardTransactionsTable
 import com.example.nhathuoc.database.tables.ReviewReportsTable
 import com.example.nhathuoc.database.tables.ReviewsTable
 import com.example.nhathuoc.database.tables.UsersTable
@@ -11,6 +12,11 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -118,11 +124,19 @@ data class ProductReviewsResponse(
 
 class ReviewService {
     private val notificationService = NotificationService()
+    private val reviewJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     private val visibleStatuses = setOf("VISIBLE")
     private val moderationStatuses = setOf("VISIBLE", "HIDDEN", "REMOVED")
     private val reportReasons = setOf("SPAM", "OFFENSIVE", "FAKE", "IRRELEVANT", "OTHER")
     private val reportStatuses = setOf("OPEN", "RESOLVED", "REJECTED")
+
+    private companion object {
+        const val FIVE_STAR_REVIEW_POINTS = 200
+    }
 
     fun listProductReviews(productId: String, includeHidden: Boolean = false): ProductReviewsResponse = transaction {
         val statusFilter = if (includeHidden) moderationStatuses else visibleStatuses
@@ -184,6 +198,18 @@ class ReviewService {
 
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val reviewId = UUID.randomUUID().toString()
+        val attachments = request.attachments
+            .filter { it.fileUrl.isNotBlank() }
+            .map { attachment ->
+                ReviewAttachmentDto(
+                    id = UUID.randomUUID().toString(),
+                    fileUrl = attachment.fileUrl.trim(),
+                    fileType = attachment.fileType.ifBlank { "IMAGE" },
+                    publicId = attachment.publicId?.ifBlank { null },
+                    sortOrder = attachment.sortOrder,
+                    createdAt = now.toString()
+                )
+            }
         ReviewsTable.insert {
             it[id] = reviewId
             it[ReviewsTable.productId] = productId
@@ -193,25 +219,22 @@ class ReviewService {
             it[rating] = request.rating
             it[title] = request.title?.trim()?.ifBlank { null }
             it[comment] = request.comment?.trim()?.ifBlank { null }
+            it[attachmentsJson] = encodeAttachments(attachments)
             it[status] = "VISIBLE"
             it[isVerifiedPurchase] = true
             it[createdAt] = now
             it[updatedAt] = now
         }
 
-        request.attachments
-            .filter { it.fileUrl.isNotBlank() }
-            .forEach { attachment ->
-                ReviewAttachmentsTable.insert {
-                    it[id] = UUID.randomUUID().toString()
-                    it[ReviewAttachmentsTable.reviewId] = reviewId
-                    it[fileUrl] = attachment.fileUrl
-                    it[fileType] = attachment.fileType.ifBlank { "IMAGE" }
-                    it[cloudinaryPublicId] = attachment.publicId?.ifBlank { null }
-                    it[sortOrder] = attachment.sortOrder
-                    it[createdAt] = now
-                }
-            }
+        val isDeliveredOrder = verifiedOrderItem[OrdersTable.status].equals("DELIVERED", ignoreCase = true)
+        if (request.rating == 5 && isDeliveredOrder) {
+            awardFiveStarReviewPoints(
+                userId = userId,
+                orderId = orderId,
+                reviewId = reviewId,
+                productId = productId
+            )
+        }
 
         mapReviewRows(
             ReviewsTable.selectAll().where { ReviewsTable.id eq reviewId }.toList()
@@ -424,24 +447,9 @@ class ReviewService {
     }
 
     private fun mapReviewRows(rows: List<ResultRow>): List<ReviewDto> {
-        val reviewIds = rows.map { it[ReviewsTable.id] }
-        val attachmentsByReviewId = if (reviewIds.isEmpty()) {
-            emptyMap()
-        } else {
-            ReviewAttachmentsTable.selectAll()
-                .where { ReviewAttachmentsTable.reviewId inList reviewIds }
-                .orderBy(ReviewAttachmentsTable.sortOrder to SortOrder.ASC)
-                .map { attachment ->
-                    attachment[ReviewAttachmentsTable.reviewId] to ReviewAttachmentDto(
-                        id = attachment[ReviewAttachmentsTable.id],
-                        fileUrl = attachment[ReviewAttachmentsTable.fileUrl],
-                        fileType = attachment[ReviewAttachmentsTable.fileType],
-                        publicId = attachment[ReviewAttachmentsTable.cloudinaryPublicId],
-                        sortOrder = attachment[ReviewAttachmentsTable.sortOrder],
-                        createdAt = attachment[ReviewAttachmentsTable.createdAt].toString()
-                    )
-                }
-                .groupBy({ it.first }, { it.second })
+        val attachmentsByReviewId = rows.associate { row ->
+            row[ReviewsTable.id] to decodeAttachments(row[ReviewsTable.attachmentsJson])
+                .sortedBy { it.sortOrder }
         }
 
         val userIds = rows.map { it[ReviewsTable.userId] }.distinct()
@@ -518,6 +526,76 @@ class ReviewService {
             createdAt = this[ReviewsTable.createdAt].toString(),
             updatedAt = this[ReviewsTable.updatedAt].toString(),
             attachments = attachments
+        )
+    }
+
+    private fun encodeAttachments(attachments: List<ReviewAttachmentDto>): String? {
+        return attachments.takeIf { it.isNotEmpty() }?.let { reviewJson.encodeToString(it) }
+    }
+
+    private fun decodeAttachments(raw: String?): List<ReviewAttachmentDto> {
+        return raw?.takeIf { it.isNotBlank() }
+            ?.let { value -> runCatching { reviewJson.decodeFromString<List<ReviewAttachmentDto>>(value) }.getOrDefault(emptyList()) }
+            .orEmpty()
+    }
+
+    private fun awardFiveStarReviewPoints(
+        userId: String,
+        orderId: String,
+        reviewId: String,
+        productId: String
+    ) {
+        val alreadyRewarded = RewardTransactionsTable
+            .selectAll()
+            .where {
+                (RewardTransactionsTable.refType eq "REVIEW") and
+                    (RewardTransactionsTable.refId eq reviewId) and
+                    (RewardTransactionsTable.type eq "EARN")
+            }
+            .count() > 0
+        if (alreadyRewarded) return
+
+        val account = RewardAccountsTable
+            .selectAll()
+            .where { RewardAccountsTable.userId eq userId }
+            .singleOrNull()
+
+        if (account == null) {
+            RewardAccountsTable.insert {
+                it[RewardAccountsTable.id] = UUID.randomUUID().toString()
+                it[RewardAccountsTable.userId] = userId
+                it[RewardAccountsTable.totalPoints] = FIVE_STAR_REVIEW_POINTS
+                it[RewardAccountsTable.usedPoints] = 0
+            }
+        } else {
+            val nextTotal = account[RewardAccountsTable.totalPoints] + FIVE_STAR_REVIEW_POINTS
+            RewardAccountsTable.update({ RewardAccountsTable.userId eq userId }) {
+                it[RewardAccountsTable.totalPoints] = nextTotal
+            }
+        }
+
+        RewardTransactionsTable.insert {
+            it[RewardTransactionsTable.id] = UUID.randomUUID().toString()
+            it[RewardTransactionsTable.userId] = userId
+            it[RewardTransactionsTable.orderId] = orderId
+            it[RewardTransactionsTable.refType] = "REVIEW"
+            it[RewardTransactionsTable.refId] = reviewId
+            it[RewardTransactionsTable.type] = "EARN"
+            it[RewardTransactionsTable.points] = FIVE_STAR_REVIEW_POINTS
+            it[RewardTransactionsTable.description] = "Thưởng đánh giá 5 sao sản phẩm"
+            it[RewardTransactionsTable.createdBy] = null
+            it[RewardTransactionsTable.metadata] = buildJsonObject {
+                put("reviewId", reviewId)
+                put("productId", productId)
+            }.toString()
+        }
+
+        notificationService.createUserNotification(
+            userId = userId,
+            title = "Bạn được cộng 200 điểm thưởng",
+            body = "Cảm ơn bạn đã đánh giá 5 sao sau khi nhận hàng.",
+            type = "REWARD",
+            refId = reviewId
         )
     }
 }

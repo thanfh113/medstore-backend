@@ -2,15 +2,15 @@ package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.BannersTable
 import com.example.nhathuoc.database.tables.CategoriesTable
-import com.example.nhathuoc.database.tables.DiseaseCategoriesTable
-import com.example.nhathuoc.database.tables.HealthArticlesTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
-import com.example.nhathuoc.database.tables.PaymentMethodsTable
+import com.example.nhathuoc.database.tables.PaymentsTable
 import com.example.nhathuoc.plugins.NotFoundException
 import com.example.nhathuoc.service.CheckoutRequest
 import com.example.nhathuoc.service.CheckoutService
 import com.example.nhathuoc.service.CreateAddressRequest
+import com.example.nhathuoc.service.OrderLifecycleService
+import com.example.nhathuoc.service.UpdateAddressRequest
 import com.example.nhathuoc.service.UpdateUserProfileRequest
 import com.example.nhathuoc.service.UserAddressDto
 import com.example.nhathuoc.service.UserProfileDto
@@ -23,6 +23,7 @@ import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
@@ -35,6 +36,9 @@ import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Serializable
 private data class CompatUpdateUserRequest(
@@ -52,8 +56,13 @@ private data class CompatAddAddressRequest(
     val recipientPhone: String,
     val fullAddress: String,
     val ward: String,
+    val wardCode: String? = null,
     val district: String,
     val province: String,
+    val provinceCode: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationSource: String = "MANUAL",
     val isDefault: Boolean = false
 )
 
@@ -88,8 +97,13 @@ private data class CompatUserAddressResponse(
     val recipientPhone: String,
     val fullAddress: String,
     val ward: String,
+    val wardCode: String? = null,
     val district: String,
     val province: String,
+    val provinceCode: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationSource: String = "MANUAL",
     val isDefault: Boolean,
     val createdAt: String = "",
     val updatedAt: String = "",
@@ -228,36 +242,6 @@ private data class CompatShopDto(
     val deletedAt: String? = null
 )
 
-@Serializable
-private data class CompatHealthArticleDto(
-    val id: String,
-    val title: String,
-    val slug: String,
-    val content: String,
-    val excerpt: String? = null,
-    val imageUrl: String? = null,
-    val author: String,
-    val category: String,
-    val tags: List<String> = emptyList(),
-    val viewCount: Int = 0,
-    val isPublished: Boolean = true,
-    val publishedAt: String? = null,
-    val createdAt: String,
-    val updatedAt: String
-)
-
-@Serializable
-private data class CompatDiseaseCategoryDto(
-    val id: String,
-    val name: String,
-    val description: String? = null,
-    val iconUrl: String? = null,
-    val sortOrder: Int = 0,
-    val isActive: Boolean = true,
-    val createdAt: String,
-    val updatedAt: String
-)
-
 private fun UserProfileDto.toCompatUserResponse(genderOverride: Int? = null): CompatUserResponse {
     val mappedGender = genderOverride ?: when (gender) {
         "Nam" -> 1
@@ -284,7 +268,7 @@ private fun UserProfileDto.toCompatUserResponse(genderOverride: Int? = null): Co
 private fun UserAddressDto.toCompatAddressResponse(): CompatUserAddressResponse {
     val normalizedType = label ?: "home"
     val normalizedPhone = phone ?: ""
-    val normalizedAddress = address
+    val normalizedAddress = fullAddress?.takeIf { it.isNotBlank() } ?: address
     return CompatUserAddressResponse(
         id = id,
         userId = userId,
@@ -293,8 +277,13 @@ private fun UserAddressDto.toCompatAddressResponse(): CompatUserAddressResponse 
         recipientPhone = normalizedPhone,
         fullAddress = normalizedAddress,
         ward = ward ?: "",
+        wardCode = wardCode,
         district = district ?: "",
         province = province ?: "",
+        provinceCode = provinceCode,
+        latitude = latitude,
+        longitude = longitude,
+        locationSource = locationSource,
         isDefault = isDefault,
         createdAt = "",
         updatedAt = "",
@@ -307,6 +296,7 @@ private fun UserAddressDto.toCompatAddressResponse(): CompatUserAddressResponse 
 fun Route.mobileCompatRoutes() {
     val userService = UserService()
     val checkoutService = CheckoutService()
+    val orderLifecycleService = OrderLifecycleService()
 
     authenticate("auth-jwt") {
         route("/user") {
@@ -381,9 +371,15 @@ fun Route.mobileCompatRoutes() {
                         recipientName = request.recipientName,
                         phone = request.recipientPhone,
                         address = request.fullAddress,
+                        fullAddress = request.fullAddress,
                         ward = request.ward,
+                        wardCode = request.wardCode,
                         district = request.district,
                         province = request.province,
+                        provinceCode = request.provinceCode,
+                        latitude = request.latitude,
+                        longitude = request.longitude,
+                        locationSource = request.locationSource,
                         isDefault = request.isDefault
                     )
                 )
@@ -397,6 +393,55 @@ fun Route.mobileCompatRoutes() {
                         address = address.toCompatAddressResponse()
                     )
                 )
+            }
+
+            put("/addresses/{id}") {
+                val userId = call.principal<JWTPrincipal>()?.getUserId()
+                    ?: return@put call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val addressId = call.parameters["id"]
+                    ?: return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Address id is required"))
+                val request = call.receive<CompatAddAddressRequest>()
+
+                userService.updateAddress(
+                    userId,
+                    addressId,
+                    UpdateAddressRequest(
+                        label = request.type,
+                        recipientName = request.recipientName,
+                        phone = request.recipientPhone,
+                        address = request.fullAddress,
+                        fullAddress = request.fullAddress,
+                        ward = request.ward,
+                        wardCode = request.wardCode,
+                        district = request.district,
+                        province = request.province,
+                        provinceCode = request.provinceCode,
+                        latitude = request.latitude,
+                        longitude = request.longitude,
+                        locationSource = request.locationSource,
+                        isDefault = request.isDefault
+                    )
+                )
+
+                val address = userService.getAddressById(userId, addressId)
+                    ?: throw NotFoundException("Address not found")
+
+                call.respond(
+                    CompatAddAddressResponse(
+                        message = "Address updated successfully",
+                        address = address.toCompatAddressResponse()
+                    )
+                )
+            }
+
+            delete("/addresses/{id}") {
+                val userId = call.principal<JWTPrincipal>()?.getUserId()
+                    ?: return@delete call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val addressId = call.parameters["id"]
+                    ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Address id is required"))
+
+                userService.deleteAddress(userId, addressId)
+                call.respond(HttpStatusCode.NoContent)
             }
         }
 
@@ -526,23 +571,81 @@ fun Route.mobileCompatRoutes() {
                     ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Order ID is required"))
                 val request = call.receive<CompatCancelOrderRequest>()
 
-                val updated = transaction {
-                    OrdersTable.update({
-                        (OrdersTable.id eq orderId) and
-                            (OrdersTable.userId eq userId) and
-                            ((OrdersTable.status eq "PENDING") or (OrdersTable.status eq "PROCESSING"))
-                    }) {
-                        it[status] = "CANCELLED"
-                        if (request.reason != null) {
-                            it[note] = request.reason
+                val outcome = transaction {
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                    val order = OrdersTable
+                        .selectAll()
+                        .where {
+                            (OrdersTable.id eq orderId) and
+                                (OrdersTable.userId eq userId) and
+                                ((OrdersTable.status eq "PENDING") or (OrdersTable.status eq "PROCESSING"))
                         }
+                        .singleOrNull()
+                        ?: return@transaction 0
+
+                    if (order[OrdersTable.paymentStatus] == "COMPLETED") {
+                        return@transaction -1
                     }
+
+                    OrdersTable.update({ OrdersTable.id eq orderId }) {
+                        it[OrdersTable.status] = "CANCELLED"
+                        if (request.reason != null) {
+                            it[OrdersTable.note] = request.reason
+                        }
+                        it[OrdersTable.paymentStatus] = "UNPAID"
+                        it[OrdersTable.updatedAt] = now
+                    }
+                    orderLifecycleService.restoreStockOnCancel(order)
+                    orderLifecycleService.cancelPendingPayments(orderId)
+                    orderLifecycleService.revertCouponAndRewardUsage(orderId)
+                    orderLifecycleService.notifyOrderStatusChanged(order, "CANCELLED", "UNPAID")
+                    1
                 }
-                if (updated == 0) {
-                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Order cannot be cancelled"))
+                if (outcome == -1) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Đơn đã thanh toán, vui lòng tạo khiếu nại/hoàn tiền thay vì hủy trực tiếp"))
+                }
+                if (outcome == 0) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Đơn không thể hủy ở trạng thái hiện tại"))
                 }
 
-                call.respond(CompatMessageResponse("Order cancelled successfully"))
+                call.respond(CompatMessageResponse("Đã hủy đơn hàng"))
+            }
+
+            post("/{orderId}/confirm-received") {
+                val userId = call.principal<JWTPrincipal>()?.getUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val orderId = call.parameters["orderId"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Order ID is required"))
+
+                val updated = transaction {
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                    val order = OrdersTable.selectAll()
+                        .where {
+                            (OrdersTable.id eq orderId) and
+                                (OrdersTable.userId eq userId) and
+                                (OrdersTable.status eq "SHIPPING")
+                        }
+                        .singleOrNull()
+                        ?: return@transaction 0
+                    val method = order[OrdersTable.paymentMethod]?.uppercase()
+                    OrdersTable.update({ OrdersTable.id eq orderId }) {
+                        it[OrdersTable.status] = "DELIVERED"
+                        it[OrdersTable.completedAt] = now
+                        it[OrdersTable.updatedAt] = now
+                        if (method == "COD") {
+                            it[OrdersTable.paymentStatus] = "COMPLETED"
+                        }
+                    }
+                    orderLifecycleService.notifyOrderStatusChanged(order, "DELIVERED", if (method == "COD") "COMPLETED" else order[OrdersTable.paymentStatus])
+                }
+                if (updated == 0) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Chỉ có thể xác nhận khi đơn đang giao và thuộc tài khoản của bạn")
+                    )
+                }
+
+                call.respond(CompatMessageResponse("Order received successfully"))
             }
         }
     }
@@ -636,99 +739,9 @@ fun Route.mobileCompatRoutes() {
         }
     }
 
-    route("/health-articles") {
-        get {
-            val category = call.parameters["category"]
-            val page = call.parameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
-            val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
-            val offset = (page - 1L) * limit
-
-                val result = transaction {
-                    var base = HealthArticlesTable.selectAll().where { HealthArticlesTable.isPublished eq true }
-                    if (!category.isNullOrBlank()) {
-                        base = HealthArticlesTable.selectAll().where { (HealthArticlesTable.isPublished eq true) and (HealthArticlesTable.category eq category) }
-                    }
-                    val total = base.count().toInt()
-                    val items = base.orderBy(HealthArticlesTable.publishedAt to SortOrder.DESC).limit(limit, offset).map { row ->
-                        CompatHealthArticleDto(
-                            id = row[HealthArticlesTable.id],
-                            title = row[HealthArticlesTable.title],
-                            slug = row[HealthArticlesTable.id],
-                            content = row[HealthArticlesTable.content] ?: "",
-                            imageUrl = row[HealthArticlesTable.thumbnailUrl],
-                            author = row[HealthArticlesTable.author] ?: "",
-                            category = row[HealthArticlesTable.category] ?: "",
-                            publishedAt = row[HealthArticlesTable.publishedAt]?.toString(),
-                            createdAt = row[HealthArticlesTable.createdAt].toString(),
-                            updatedAt = row[HealthArticlesTable.updatedAt].toString()
-                        )
-                    }
-                    RoutePaginatedDataMessageResponse(
-                        data = items,
-                        pagination = RoutePaginationResponse(
-                            page = page,
-                            limit = limit,
-                            total = total,
-                            totalPages = if (total == 0) 0 else ((total + limit - 1) / limit),
-                            hasNext = offset + limit < total,
-                            hasPrev = page > 1
-                        ),
-                        message = "Health articles retrieved successfully"
-                    )
-                }
-                call.respond(result)
-            }
-
-        get("/{slug}") {
-            val slug = call.parameters["slug"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Article slug is required"))
-            val article = transaction {
-                HealthArticlesTable.selectAll().where { (HealthArticlesTable.id eq slug) and (HealthArticlesTable.isPublished eq true) }.singleOrNull()
-            } ?: throw NotFoundException("Article not found")
-
-            call.respond(
-                CompatHealthArticleDto(
-                    id = article[HealthArticlesTable.id],
-                    title = article[HealthArticlesTable.title],
-                    slug = article[HealthArticlesTable.id],
-                    content = article[HealthArticlesTable.content] ?: "",
-                    imageUrl = article[HealthArticlesTable.thumbnailUrl],
-                    author = article[HealthArticlesTable.author] ?: "",
-                    category = article[HealthArticlesTable.category] ?: "",
-                    publishedAt = article[HealthArticlesTable.publishedAt]?.toString(),
-                    createdAt = article[HealthArticlesTable.createdAt].toString(),
-                    updatedAt = article[HealthArticlesTable.updatedAt].toString()
-                )
-            )
-        }
-    }
-
-    route("/disease-categories") {
-        get {
-            val items = transaction {
-                DiseaseCategoriesTable.selectAll()
-                    .where { DiseaseCategoriesTable.isActive eq true }
-                    .orderBy(DiseaseCategoriesTable.sortOrder to SortOrder.ASC)
-                    .map { row ->
-                        CompatDiseaseCategoryDto(
-                            id = row[DiseaseCategoriesTable.id],
-                            name = row[DiseaseCategoriesTable.name],
-                            description = row[DiseaseCategoriesTable.description],
-                            iconUrl = row[DiseaseCategoriesTable.iconUrl],
-                            sortOrder = row[DiseaseCategoriesTable.sortOrder],
-                            isActive = row[DiseaseCategoriesTable.isActive],
-                            createdAt = row[DiseaseCategoriesTable.createdAt].toString(),
-                            updatedAt = row[DiseaseCategoriesTable.updatedAt].toString()
-                        )
-                    }
-            }
-            call.respond(items)
-        }
-    }
-
     route("/payment-methods") {
         get {
-            val methods = listOf("COD", "MOMO", "VNPAY", "ZALOPAY")
+            val methods = listOf("COD", "MOMO", "ZALOPAY")
             call.respond(methods)
         }
     }

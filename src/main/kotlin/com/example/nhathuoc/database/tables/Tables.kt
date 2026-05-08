@@ -24,6 +24,9 @@ object UsersTable : Table("users") {
     val role        = varchar("role", 20).default("USER") // ADMIN | EMPLOYEE | USER
     val isActive    = bool("is_active").default(true)
     val lastLoginAt = datetime("last_login_at").nullable()
+    val fcmToken    = text("fcm_token").nullable()
+    val fcmPlatform = varchar("fcm_platform", 20).nullable()
+    val fcmUpdatedAt = datetime("fcm_updated_at").nullable()
     val createdAt   = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt   = datetime("updated_at").defaultExpression(CurrentDateTime)
     val deletedAt   = datetime("deleted_at").nullable()
@@ -170,9 +173,13 @@ object ProductsTable : Table("products") {
     val unit               = varchar("unit", 50).default("Hộp")
     val price              = decimal("price", 15, 0)  // Match DB: decimal(15,0)
     val originalPrice      = decimal("original_price", 15, 0).nullable() // Match DB
+    val importPrice        = decimal("import_price", 12, 2).nullable()
     val discountPct        = integer("discount_pct").default(0)
     val rewardPoints       = integer("reward_points").default(0)
     val stock              = integer("stock").default(0)
+    val inventoryNote      = text("inventory_note").nullable()
+    val mfgDate            = date("mfg_date").nullable()
+    val expDate            = date("exp_date").nullable()
     // Số đăng ký lưu hành (ví dụ: CE Mark, FDA 510(k), ISO 13485)
     val registrationNumber = varchar("registration_number", 100).nullable()
     val riskClassification = varchar("risk_classification", 1).default("A")  // Phân loại A|B|C|D theo TTBYT
@@ -246,13 +253,6 @@ object ProductDeleteRequestsTable : Table("product_delete_requests") {
 
 
 
-// Junction table for products and disease categories
-object ProductDiseasesTable : Table("product_diseases") {
-    val productId = varchar("product_id", 36).references(ProductsTable.id)
-    val diseaseId = varchar("disease_id", 36).references(DiseaseCategoriesTable.id)
-    override val primaryKey = PrimaryKey(productId, diseaseId)
-}
-
 // ─────────────────────────────────────────────────────────────
 // CART & ORDERS
 // ─────────────────────────────────────────────────────────────
@@ -274,10 +274,17 @@ object UserAddressesTable : Table("user_addresses") {
     val recipientName = varchar("recipient_name", 100).nullable()
     val phone         = varchar("phone", 15).nullable()
     val address       = text("address")
+    val fullAddress   = text("full_address").nullable()
     val ward          = varchar("ward", 100).nullable()
+    val wardCode      = varchar("ward_code", 20).nullable()
     val district      = varchar("district", 100).nullable()
     val province      = varchar("province", 100).nullable()
+    val provinceCode  = varchar("province_code", 20).nullable()
+    val latitude      = decimal("latitude", 10, 8).nullable()
+    val longitude     = decimal("longitude", 11, 8).nullable()
+    val locationSource = varchar("location_source", 20).default("MANUAL")
     val isDefault     = bool("is_default").default(false)
+    val isDeleted     = bool("is_deleted").default(false)
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -287,10 +294,20 @@ object OrdersTable : Table("orders") {
     val userId        = varchar("user_id", 36).references(UsersTable.id).nullable()
     val orderChannel  = varchar("order_channel", 20).default("ONLINE") // ONLINE | POS
     val addressId     = varchar("address_id", 36).references(UserAddressesTable.id).nullable()
+    val shippingRecipientName = varchar("shipping_recipient_name", 100).nullable()
+    val shippingPhone = varchar("shipping_phone", 20).nullable()
+    val shippingAddressText = text("shipping_address_text").nullable()
+    val shippingProvinceCode = varchar("shipping_province_code", 20).nullable()
+    val shippingProvinceName = varchar("shipping_province_name", 100).nullable()
+    val shippingWardCode = varchar("shipping_ward_code", 20).nullable()
+    val shippingWardName = varchar("shipping_ward_name", 100).nullable()
+    val shippingLatitude = decimal("shipping_latitude", 10, 8).nullable()
+    val shippingLongitude = decimal("shipping_longitude", 11, 8).nullable()
+    val shippingZone = varchar("shipping_zone", 30).nullable()
     // PENDING | PROCESSING | SHIPPING | DELIVERED | CANCELLED | RETURNED
     val status        = varchar("status", 30).default("PENDING")
     val pickupType    = varchar("pickup_type", 30).default("DELIVERY") // DELIVERY | PICKUP
-    val branchId      = varchar("branch_id", 36).references(PharmacyBranchesTable.id).nullable()
+    val branchId      = varchar("branch_id", 36).nullable()
     val cashierUserId = varchar("cashier_user_id", 36).references(UsersTable.id).nullable()
     val subtotal      = decimal("subtotal", 12, 2).nullable()
     val shippingFee   = decimal("shipping_fee", 12, 2).default(0.toBigDecimal())
@@ -517,6 +534,7 @@ object ReviewsTable : Table("reviews") {
     val rating    = integer("rating")  // 1-5
     val title     = varchar("title", 150).nullable()
     val comment   = text("comment").nullable()
+    val attachmentsJson = text("attachments_json").nullable()
     val status    = varchar("status", 20).default("VISIBLE")
     val isVerifiedPurchase = bool("is_verified_purchase").default(false)
     val helpfulCount = integer("helpful_count").default(0)
@@ -585,6 +603,9 @@ object OrderComplaintsTable : Table("order_complaints") {
     val type          = varchar("type", 50)
     val title         = varchar("title", 200)
     val description   = text("description")
+    val attachmentsJson = text("attachments_json").nullable()
+    val messagesJson  = text("messages_json").nullable()
+    val eventsJson    = text("events_json").nullable()
     val status        = varchar("status", 30).default("OPEN")
     val priority      = varchar("priority", 20).default("NORMAL")
     val resolution    = text("resolution").nullable()
@@ -691,32 +712,6 @@ object BannersTable : Table("banners") {
     val startDt   = datetime("start_dt").nullable()
     val endDt     = datetime("end_dt").nullable()
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-object HealthArticlesTable : Table("health_articles") {
-    val id           = varchar("id", 36)
-    val title        = varchar("title", 300)
-    val content      = text("content").nullable()
-    val thumbnailUrl = text("thumbnail_url").nullable()
-    val author       = varchar("author", 100).nullable()
-    val category     = varchar("category", 100).nullable()
-    val isPublished  = bool("is_published").default(false)
-    val publishedAt  = datetime("published_at").nullable()
-    val createdAt    = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt    = datetime("updated_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-object DiseaseCategoriesTable : Table("disease_categories") {
-    val id          = varchar("id", 36)
-    val name        = varchar("name", 100)
-    val description = text("description").nullable()
-    val iconUrl     = text("icon_url").nullable()
-    val sortOrder   = integer("sort_order").default(0)
-    val isActive    = bool("is_active").default(true)
-    val createdAt   = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt   = datetime("updated_at").defaultExpression(CurrentDateTime)
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -831,87 +826,10 @@ object ProductAttributeValuesTable : Table("product_attribute_values") {
 }
 
 // ─────────────────────────────────────────────────────────────
-// INVENTORY BATCHES
 // ─────────────────────────────────────────────────────────────
 
-object ProductBatchesTable : Table("product_batches") {
-    val id              = varchar("id", 36)
-    val productId       = varchar("product_id", 36).references(ProductsTable.id)
-    // Note: shopId removed - not in actual DB schema, calculate from productId when needed
-    val lotNumber       = varchar("lot_number", 100).nullable()
-    val mfgDate         = date("mfg_date").nullable()
-    val expDate         = date("exp_date").nullable()
-    val quantityOnHand  = integer("quantity_on_hand").default(0)
-    val importPrice     = decimal("import_price", 12, 2).nullable()
-    val note            = text("note").nullable()
-    val createdAt       = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt       = datetime("updated_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-object OrderItemBatchesTable : Table("order_item_batches") {
-    val id           = varchar("id", 36)
-    val orderItemId  = varchar("order_item_id", 36).references(OrderItemsTable.id)
-    val batchId      = varchar("batch_id", 36).references(ProductBatchesTable.id)
-    val quantity     = integer("quantity")
-    val createdAt    = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        uniqueIndex(orderItemId, batchId)
-    }
-}
-
 // ─────────────────────────────────────────────────────────────
-// OFFLINE SYNC FOUNDATION
 // ─────────────────────────────────────────────────────────────
-
-object SyncChangesTable : Table("sync_changes") {
-    val id               = varchar("id", 36)
-    val entityType       = varchar("entity_type", 50)
-    val entityId         = varchar("entity_id", 36)
-    val operation        = varchar("operation", 20) // CREATE | UPDATE | DELETE
-    val payloadJson      = text("payload_json").nullable()
-    val sourceDeviceId   = varchar("source_device_id", 128).nullable()
-    val clientMutationId = varchar("client_mutation_id", 64).nullable()
-    val serverVersion    = long("server_version").default(0)
-    val createdByUserId  = varchar("created_by_user_id", 36).references(UsersTable.id).nullable()
-    val createdAt        = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        index(false, serverVersion)
-        uniqueIndex(clientMutationId)
-    }
-}
-
-object SyncCheckpointsTable : Table("sync_checkpoints") {
-    val id                = varchar("id", 36)
-    val deviceId          = varchar("device_id", 128).uniqueIndex()
-    val lastPulledVersion = long("last_pulled_version").default(0)
-    val lastPushedVersion = long("last_pushed_version").default(0)
-    val lastSyncAt        = datetime("last_sync_at").nullable()
-    val createdAt         = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt         = datetime("updated_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-object SyncJobsTable : Table("sync_jobs") {
-    val id           = varchar("id", 36)
-    val deviceId     = varchar("device_id", 128).nullable()
-    val jobType      = varchar("job_type", 30).default("INCREMENTAL")
-    val status       = varchar("status", 20).default("PENDING")
-    val startedAt    = datetime("started_at").nullable()
-    val finishedAt   = datetime("finished_at").nullable()
-    val errorMessage = text("error_message").nullable()
-    val createdAt    = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt    = datetime("updated_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        index(false, status)
-    }
-}
 
 // ─────────────────────────────────────────────────────────────
 // MEDICAL CONSULTATION SYSTEM

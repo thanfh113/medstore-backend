@@ -32,7 +32,7 @@ fun Route.orderFulfillmentRoutes() {
                             mapOf(
                                 "data" to mapOf(
                                     "orderId" to result.orderId,
-                                    "allocations" to result.allocatedBatches
+                                    "allocations" to result.allocatedStock
                                 ),
                                 "message" to result.message
                             )

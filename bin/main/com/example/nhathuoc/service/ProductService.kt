@@ -27,9 +27,13 @@ data class ProductDto(
     val unit: String,
     val price: BigDecimal,
     val originalPrice: BigDecimal?,
+    val importPrice: BigDecimal?,
     val discountPct: Int,
     val rewardPoints: Int,
     val stock: Int,
+    val inventoryNote: String?,
+    val mfgDate: LocalDate?,
+    val expDate: LocalDate?,
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String?,
     val riskClassification: String,
@@ -59,9 +63,13 @@ data class ProductDto(
         "unit" to unit,
         "price" to price.toString(),
         "originalPrice" to originalPrice?.toString(),
+        "importPrice" to importPrice?.toString(),
         "discountPct" to discountPct,
         "rewardPoints" to rewardPoints,
         "stock" to stock,
+        "inventoryNote" to inventoryNote,
+        "mfgDate" to mfgDate?.toString(),
+        "expDate" to expDate?.toString(),
         "registrationNumber" to registrationNumber,
         "riskClassification" to riskClassification,
         "requiresCertification" to requiresCertification,
@@ -157,7 +165,11 @@ data class CreateProductRequest(
     val unit: String = "Hộp",
     val price: BigDecimal,
     val originalPrice: BigDecimal?,
+    val importPrice: BigDecimal? = null,
     val stock: Int = 0,
+    val inventoryNote: String? = null,
+    val mfgDate: LocalDate? = null,
+    val expDate: LocalDate? = null,
     val discountPct: Int = 0,
     val rewardPoints: Int = 0,
     val productType: String = "MEDICAL_SUPPLY",
@@ -184,8 +196,12 @@ data class UpdateProductRequest(
     val unit: String?,
     val price: BigDecimal?,
     val originalPrice: BigDecimal?,
+    val importPrice: BigDecimal? = null,
     val stock: Int?,
     val stockQuantity: Int? = null,  // For Desktop compatibility
+    val inventoryNote: String? = null,
+    val mfgDate: LocalDate? = null,
+    val expDate: LocalDate? = null,
     val discountPct: Int?,
     val rewardPoints: Int? = null,
     val productType: String? = null,
@@ -222,9 +238,7 @@ data class ProductDeleteRequestDto(
     val updatedAt: LocalDateTime
 )
 
-class ProductService(
-    private val categoryAttributeService: CategoryAttributeService = CategoryAttributeService()
-) {
+class ProductService {
     private val allowedRiskClassifications = setOf("A", "B", "C", "D")
 
     private fun normalizeRiskClassification(value: String): String {
@@ -233,6 +247,10 @@ class ProductService(
             "Risk classification must be one of A, B, C, D"
         }
         return normalized
+    }
+
+    private fun isDirectConsultationOnly(riskClassification: String): Boolean {
+        return riskClassification == "C" || riskClassification == "D"
     }
 
     /**
@@ -294,10 +312,8 @@ class ProductService(
                     mapRowToProductDto(row)
                 }
 
-            // Load attributes for each product
-            val productsWithAttributes = products.map { product ->
+            val productsWithImages = products.map { product ->
                 product.copy(
-                    attributes = getProductAttributes(product.id),
                     images = getProductImages(product.id)
                 )
             }
@@ -305,7 +321,7 @@ class ProductService(
             val totalPages = ((total + limit - 1) / limit).toInt()
 
             ProductListResponse(
-                products = productsWithAttributes,
+                products = productsWithImages,
                 total = total,
                 page = page,
                 limit = limit,
@@ -326,7 +342,6 @@ class ProductService(
                 ?.let { row ->
                     val product = mapRowToProductDto(row)
                     product.copy(
-                        attributes = getProductAttributes(productId),
                         images = getProductImages(productId),
                         certificates = getProductCertificates(productId)
                     )
@@ -353,14 +368,12 @@ class ProductService(
                 throw IllegalArgumentException("Category not found")
             }
 
-            // Validate attributes against category requirements
-            categoryAttributeService.validateProductAttributes(request.categoryId, request.attributes)
-
             val productId = UUID.randomUUID().toString()
             val slug = generateSlug(request.name, productId)
             val riskClassification = normalizeRiskClassification(request.riskClassification)
+            val directConsultationOnly = isDirectConsultationOnly(riskClassification)
 
-            // Insert product - stock will be managed through batches
+            // Stock is stored directly on products after simplifying inventory.
             ProductsTable.insert {
                 it[ProductsTable.id] = productId
                 it[ProductsTable.categoryId] = request.categoryId
@@ -375,19 +388,21 @@ class ProductService(
                 it[ProductsTable.unit] = request.unit
                 it[ProductsTable.price] = request.price
                 it[ProductsTable.originalPrice] = request.originalPrice
+                it[ProductsTable.importPrice] = request.importPrice
                 it[ProductsTable.discountPct] = request.discountPct
                 it[ProductsTable.rewardPoints] = request.rewardPoints
-                it[ProductsTable.stock] = 0  // Will be updated by batch operations
+                it[ProductsTable.stock] = request.stock.coerceAtLeast(0)
+                it[ProductsTable.inventoryNote] = request.inventoryNote
+                it[ProductsTable.mfgDate] = request.mfgDate
+                it[ProductsTable.expDate] = request.expDate
                 it[ProductsTable.registrationNumber] = request.registrationNumber
                 it[ProductsTable.riskClassification] = riskClassification
-                it[ProductsTable.requiresCertification] = request.requiresCertification
-                it[ProductsTable.requiresConsultation] = request.requiresConsultation
+                it[ProductsTable.requiresCertification] = request.requiresCertification || directConsultationOnly
+                it[ProductsTable.requiresConsultation] = request.requiresConsultation || directConsultationOnly
                 it[ProductsTable.targetAudience] = request.targetAudience.ifBlank { "ALL" }
                 it[ProductsTable.isActive] = request.isActive
             }
 
-            // Save product attributes
-            saveProductAttributes(productId, request.categoryId, request.attributes)
             saveProductImages(productId, request.images)
             saveProductCertificates(productId, request.certificates)
 
@@ -414,15 +429,10 @@ class ProductService(
                 .singleOrNull()
                 ?: throw IllegalArgumentException("Product not found")
 
-            val currentCategoryId = product[ProductsTable.categoryId]
-            val newCategoryId = request.categoryId ?: currentCategoryId
-
-            // If category changed or attributes updated, validate attributes
-            if (request.attributes != null) {
-                if (newCategoryId != null) {
-                    categoryAttributeService.validateProductAttributes(newCategoryId, request.attributes)
-                }
-            }
+            val nextRiskClassification = request.riskClassification
+                ?.let(::normalizeRiskClassification)
+                ?: product[ProductsTable.riskClassification]
+            val directConsultationOnly = isDirectConsultationOnly(nextRiskClassification)
 
             // Update product basic info
             ProductsTable.update({ ProductsTable.id eq productId }) {
@@ -440,31 +450,28 @@ class ProductService(
                 request.unit?.let { value -> it[ProductsTable.unit] = value }
                 request.price?.let { value -> it[ProductsTable.price] = value }
                 request.originalPrice?.let { value -> it[ProductsTable.originalPrice] = value }
+                request.importPrice?.let { value -> it[ProductsTable.importPrice] = value }
                 // Handle stock - prefer stockQuantity if provided (Desktop), else use stock
                 val stockValue = request.stockQuantity ?: request.stock
-                stockValue?.let { value -> it[ProductsTable.stock] = value }
+                stockValue?.let { value -> it[ProductsTable.stock] = value.coerceAtLeast(0) }
+                request.inventoryNote?.let { value -> it[ProductsTable.inventoryNote] = value }
+                request.mfgDate?.let { value -> it[ProductsTable.mfgDate] = value }
+                request.expDate?.let { value -> it[ProductsTable.expDate] = value }
                 request.discountPct?.let { value -> it[ProductsTable.discountPct] = value }
                 request.rewardPoints?.let { value -> it[ProductsTable.rewardPoints] = value }
                 request.registrationNumber?.let { value -> it[ProductsTable.registrationNumber] = value }
-                request.riskClassification?.let { value ->
-                    it[ProductsTable.riskClassification] = normalizeRiskClassification(value)
+                request.riskClassification?.let { _ -> it[ProductsTable.riskClassification] = nextRiskClassification }
+                if (request.requiresCertification != null || directConsultationOnly) {
+                    it[ProductsTable.requiresCertification] =
+                        (request.requiresCertification ?: product[ProductsTable.requiresCertification]) || directConsultationOnly
                 }
-                request.requiresCertification?.let { value -> it[ProductsTable.requiresCertification] = value }
-                request.requiresConsultation?.let { value -> it[ProductsTable.requiresConsultation] = value }
+                if (request.requiresConsultation != null || directConsultationOnly) {
+                    it[ProductsTable.requiresConsultation] =
+                        (request.requiresConsultation ?: product[ProductsTable.requiresConsultation]) || directConsultationOnly
+                }
                 request.targetAudience?.let { value -> it[ProductsTable.targetAudience] = value.ifBlank { "ALL" } }
                 request.isActive?.let { value -> it[ProductsTable.isActive] = value }
                 it[ProductsTable.updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-            }
-
-            // Update attributes if provided
-            if (request.attributes != null && newCategoryId != null) {
-                // Delete existing attributes
-                ProductAttributeValuesTable.deleteWhere {
-                    ProductAttributeValuesTable.productId eq productId
-                }
-
-                // Save new attributes
-                saveProductAttributes(productId, newCategoryId, request.attributes)
             }
 
             if (request.images != null) {
@@ -486,44 +493,32 @@ class ProductService(
 
     fun deleteProduct(productId: String) {
         transaction {
-            // Validate product exists
             val productExists = ProductsTable
                 .selectAll()
-                .where {
-                    ProductsTable.id eq productId
-                }
+                .where { ProductsTable.id eq productId }
                 .count() > 0
 
             if (!productExists) {
                 throw IllegalArgumentException("Product not found")
             }
 
-            // Check if product can be deleted (no pending orders, etc.)
-            // This is a business rule - you might want to just mark as inactive instead
+            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
-            val cloudinaryPublicIds = ProductImagesTable
-                .selectAll()
-                .where { ProductImagesTable.productId eq productId }
-                .mapNotNull { it[ProductImagesTable.cloudinaryPublicId] }
-
-            // Delete related data
-            ProductAttributeValuesTable.deleteWhere { ProductAttributeValuesTable.productId eq productId }
-            ProductImagesTable.deleteWhere { ProductImagesTable.productId eq productId }
-            ProductCertificatesTable.deleteWhere { ProductCertificatesTable.productId eq productId }
-
-            // Delete product
-            ProductsTable.deleteWhere { ProductsTable.id eq productId }
-
-            cloudinaryPublicIds.forEach(::safeDeleteCloudinaryAsset)
+            CartItemsTable.deleteWhere { CartItemsTable.productId eq productId }
+            ProductsTable.update({ ProductsTable.id eq productId }) {
+                it[ProductsTable.isActive] = false
+                it[ProductsTable.stock] = 0
+                it[ProductsTable.updatedAt] = now
+                it[ProductsTable.deletedAt] = now
+            }
         }
     }
 
     /**
-     * Add a batch/lot to a product
+     * Receive product stock into the simplified product-level inventory.
      */
-    fun addBatch(
+    fun addStockReceipt(
         productId: String,
-        lotNumber: String?,
         mfgDate: LocalDate?,
         expDate: LocalDate?,
         quantity: Int,
@@ -540,22 +535,8 @@ class ProductService(
                 throw IllegalArgumentException("Product not found")
             }
 
-            require(quantity > 0) { "Batch quantity must be greater than 0" }
+            require(quantity > 0) { "Stock quantity must be greater than 0" }
 
-            val batchId = UUID.randomUUID().toString()
-
-            // Insert batch
-            ProductBatchesTable.insert {
-                it[ProductBatchesTable.id] = batchId
-                it[ProductBatchesTable.productId] = productId
-                it[ProductBatchesTable.lotNumber] = lotNumber
-                it[ProductBatchesTable.mfgDate] = mfgDate
-                it[ProductBatchesTable.expDate] = expDate
-                it[ProductBatchesTable.quantityOnHand] = quantity
-                it[ProductBatchesTable.importPrice] = importPrice
-            }
-
-            // Update product stock
             val currentStock = ProductsTable
                 .select(ProductsTable.stock)
                 .where { ProductsTable.id eq productId }
@@ -563,10 +544,13 @@ class ProductService(
 
             ProductsTable.update({ ProductsTable.id eq productId }) {
                 it[ProductsTable.stock] = currentStock + quantity
+                importPrice?.let { value -> it[ProductsTable.importPrice] = value }
+                mfgDate?.let { value -> it[ProductsTable.mfgDate] = value }
+                expDate?.let { value -> it[ProductsTable.expDate] = value }
                 it[ProductsTable.updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
             }
 
-            batchId
+            productId
         }
     }
 
@@ -579,31 +563,8 @@ class ProductService(
             if (!productExists) {
                 throw IllegalArgumentException("Product not found")
             }
-
-            val normalizedIds = diseaseIds
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .distinct()
-
-            if (normalizedIds.isNotEmpty()) {
-                val validIds = DiseaseCategoriesTable
-                    .selectAll()
-                    .where { DiseaseCategoriesTable.id inList normalizedIds }
-                    .map { it[DiseaseCategoriesTable.id] }
-                    .toSet()
-                val missingIds = normalizedIds.filterNot { it in validIds }
-                if (missingIds.isNotEmpty()) {
-                    throw IllegalArgumentException("Invalid disease IDs: ${missingIds.joinToString(", ")}")
-                }
-            }
-
-            ProductDiseasesTable.deleteWhere { ProductDiseasesTable.productId eq productId }
-            normalizedIds.forEach { diseaseId ->
-                ProductDiseasesTable.insert {
-                    it[ProductDiseasesTable.productId] = productId
-                    it[ProductDiseasesTable.diseaseId] = diseaseId
-                }
-            }
+            // Disease mapping was removed from the simplified DATN schema.
+            // Keep this method as a compatibility no-op for older desktop calls.
         }
     }
 
@@ -612,123 +573,16 @@ class ProductService(
     }
 
     fun createDeleteRequest(productId: String, requestedByUserId: String, reason: String?): String {
-        return transaction {
-            val exists = ProductsTable
-                .selectAll()
-                .where { ProductsTable.id eq productId }
-                .count() > 0
-            if (!exists) {
-                throw IllegalArgumentException("Product not found")
-            }
-
-            val pending = ProductDeleteRequestsTable
-                .selectAll()
-                .where {
-                    (ProductDeleteRequestsTable.productId eq productId) and
-                    (ProductDeleteRequestsTable.status eq "PENDING")
-                }
-                .count() > 0
-            if (pending) {
-                throw IllegalArgumentException("Delete request is already pending for this product")
-            }
-
-            val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-            val requestId = UUID.randomUUID().toString()
-            ProductDeleteRequestsTable.insert {
-                it[id] = requestId
-                it[ProductDeleteRequestsTable.productId] = productId
-                it[ProductDeleteRequestsTable.requestedByUserId] = requestedByUserId
-                it[ProductDeleteRequestsTable.reason] = reason?.trim()?.ifBlank { null }
-                it[status] = "PENDING"
-                it[createdAt] = now
-                it[updatedAt] = now
-            }
-            requestId
-        }
+        deleteProduct(productId)
+        return productId
     }
 
     fun listDeleteRequests(status: String? = null): List<ProductDeleteRequestDto> {
-        return transaction {
-            val normalizedStatus = status?.trim()?.uppercase()?.ifBlank { null }
-            ProductDeleteRequestsTable
-                .join(ProductsTable, JoinType.INNER, ProductDeleteRequestsTable.productId, ProductsTable.id)
-                .selectAll()
-                .where {
-                    if (normalizedStatus == null) ProductDeleteRequestsTable.status neq "ARCHIVED"
-                    else ProductDeleteRequestsTable.status eq normalizedStatus
-                }
-                .orderBy(ProductDeleteRequestsTable.createdAt, SortOrder.DESC)
-                .map { row ->
-                    ProductDeleteRequestDto(
-                        id = row[ProductDeleteRequestsTable.id],
-                        productId = row[ProductDeleteRequestsTable.productId],
-                        productName = row[ProductsTable.name],
-                        status = row[ProductDeleteRequestsTable.status],
-                        reason = row[ProductDeleteRequestsTable.reason],
-                        requestedByUserId = row[ProductDeleteRequestsTable.requestedByUserId],
-                        reviewedByUserId = row[ProductDeleteRequestsTable.reviewedByUserId],
-                        reviewedAt = row[ProductDeleteRequestsTable.reviewedAt],
-                        createdAt = row[ProductDeleteRequestsTable.createdAt],
-                        updatedAt = row[ProductDeleteRequestsTable.updatedAt]
-                    )
-                }
-        }
+        return emptyList()
     }
 
     fun reviewDeleteRequest(requestId: String, adminUserId: String, approve: Boolean): ProductDeleteRequestDto {
-        return transaction {
-            val existing = ProductDeleteRequestsTable
-                .selectAll()
-                .where {
-                    ProductDeleteRequestsTable.id eq requestId
-                }
-                .singleOrNull()
-                ?: throw IllegalArgumentException("Delete request not found")
-
-            if (existing[ProductDeleteRequestsTable.status] != "PENDING") {
-                throw IllegalArgumentException("Delete request is already processed")
-            }
-
-            val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-            val finalStatus = if (approve) "APPROVED" else "REJECTED"
-
-            ProductDeleteRequestsTable.update({ ProductDeleteRequestsTable.id eq requestId }) {
-                it[status] = finalStatus
-                it[reviewedByUserId] = adminUserId
-                it[reviewedAt] = now
-                it[updatedAt] = now
-            }
-
-            val productId = existing[ProductDeleteRequestsTable.productId]
-            val productName = ProductsTable
-                .select(ProductsTable.name)
-                .where { ProductsTable.id eq productId }
-                .singleOrNull()
-                ?.get(ProductsTable.name)
-                ?: "Deleted product"
-
-            val responseDto = ProductDeleteRequestDto(
-                id = requestId,
-                productId = productId,
-                productName = productName,
-                status = finalStatus,
-                reason = existing[ProductDeleteRequestsTable.reason],
-                requestedByUserId = existing[ProductDeleteRequestsTable.requestedByUserId],
-                reviewedByUserId = adminUserId,
-                reviewedAt = now,
-                createdAt = existing[ProductDeleteRequestsTable.createdAt],
-                updatedAt = now
-            )
-
-            if (approve) {
-                // FK is RESTRICT from product_delete_requests -> products, so clear related requests first.
-                ProductDeleteRequestsTable.deleteWhere { ProductDeleteRequestsTable.productId eq productId }
-                deleteProduct(productId)
-                return@transaction responseDto
-            }
-
-            responseDto
-        }
+        throw IllegalArgumentException("Product delete approval flow was removed. Products are archived directly.")
     }
 
     private fun mapRowToProductDto(row: ResultRow): ProductDto {
@@ -746,9 +600,13 @@ class ProductService(
             unit = row[ProductsTable.unit],
             price = row[ProductsTable.price],
             originalPrice = row[ProductsTable.originalPrice],
+            importPrice = row[ProductsTable.importPrice],
             discountPct = row[ProductsTable.discountPct],
             rewardPoints = row[ProductsTable.rewardPoints],
             stock = row[ProductsTable.stock],
+            inventoryNote = row[ProductsTable.inventoryNote],
+            mfgDate = row[ProductsTable.mfgDate],
+            expDate = row[ProductsTable.expDate],
             registrationNumber = row[ProductsTable.registrationNumber],
             riskClassification = row[ProductsTable.riskClassification],
             requiresCertification = row[ProductsTable.requiresCertification],
@@ -763,27 +621,7 @@ class ProductService(
     }
 
     private fun getProductAttributes(productId: String): Map<String, Any> {
-        return ProductAttributeValuesTable
-            .join(CategoryAttributesTable, JoinType.INNER) {
-                ProductAttributeValuesTable.attributeId eq CategoryAttributesTable.id
-            }
-            .selectAll()
-            .where { ProductAttributeValuesTable.productId eq productId }
-            .associate { row ->
-                val key = row[CategoryAttributesTable.attrKey]
-                val dataType = row[CategoryAttributesTable.dataType]
-
-                val value: Any = when (dataType) {
-                    "text", "textarea", "select" -> row[ProductAttributeValuesTable.valueText] ?: ""
-                    "number" -> row[ProductAttributeValuesTable.valueNumber] ?: 0
-                    "boolean" -> row[ProductAttributeValuesTable.valueBool] ?: false
-                    "date" -> row[ProductAttributeValuesTable.valueDate]?.toString() ?: ""
-                    "multiselect" -> row[ProductAttributeValuesTable.valueText]?.split(",") ?: emptyList<String>()
-                    else -> row[ProductAttributeValuesTable.valueText] ?: ""
-                }
-
-                key to value
-            }
+        return emptyMap()
     }
 
     private fun getProductImages(productId: String): List<ProductImageDto> {
@@ -825,52 +663,7 @@ class ProductService(
     }
 
     private fun saveProductAttributes(productId: String, categoryId: String, attributes: Map<String, Any>) {
-        // Get category attributes to determine data types
-        val categoryAttributes = categoryAttributeService.getCategoryAttributes(categoryId)
-
-        for ((key, value) in attributes) {
-            val attrDef = categoryAttributes.find { it.key == key } ?: continue
-
-            val attributeValueId = UUID.randomUUID().toString()
-
-            ProductAttributeValuesTable.insert {
-                it[ProductAttributeValuesTable.id] = attributeValueId
-                it[ProductAttributeValuesTable.productId] = productId
-                it[ProductAttributeValuesTable.attributeId] = attrDef.id
-
-                // Store value in appropriate column based on data type
-                when (attrDef.dataType) {
-                    "text", "textarea", "select" -> {
-                        it[ProductAttributeValuesTable.valueText] = value.toString()
-                    }
-                    "number" -> {
-                        it[ProductAttributeValuesTable.valueNumber] = when (value) {
-                            is Number -> BigDecimal.valueOf(value.toDouble())
-                            is String -> BigDecimal(value)
-                            else -> throw IllegalArgumentException("Invalid number value for attribute ${attrDef.key}")
-                        }
-                    }
-                    "boolean" -> {
-                        it[ProductAttributeValuesTable.valueBool] = when (value) {
-                            is Boolean -> value
-                            is String -> value.lowercase() == "true"
-                            else -> throw IllegalArgumentException("Invalid boolean value for attribute ${attrDef.key}")
-                        }
-                    }
-                    "date" -> {
-                        it[ProductAttributeValuesTable.valueDate] = LocalDate.parse(value.toString())
-                    }
-                    "multiselect" -> {
-                        val valueList = when (value) {
-                            is String -> value.split(",").map { it.trim() }
-                            is List<*> -> value.map { it.toString() }
-                            else -> listOf(value.toString())
-                        }
-                        it[ProductAttributeValuesTable.valueText] = valueList.joinToString(",")
-                    }
-                }
-            }
-        }
+        // Dynamic product attributes were removed from the simplified DATN schema.
     }
 
     private fun replaceProductImages(productId: String, images: List<ProductImageInput>) {

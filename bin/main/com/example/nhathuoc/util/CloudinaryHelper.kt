@@ -130,6 +130,17 @@ object CloudinaryHelper {
         val sourceMarker = "/$sourceResourceType/upload/"
         val afterUpload = fileUrl.substringAfter(sourceMarker, missingDelimiterValue = "")
         if (afterUpload.isBlank()) return fileUrl
+        val deliveryResourceType =
+            if (
+                resourceType == "raw" &&
+                sourceResourceType == "image" &&
+                fileUrl.substringBefore("?").lowercase().endsWith(".pdf")
+            ) {
+                // Old PDF certificates were uploaded under image/upload before raw PDF support.
+                sourceResourceType
+            } else {
+                resourceType
+            }
 
         val publicId = afterUpload
             .substringBefore("?")
@@ -143,7 +154,7 @@ object CloudinaryHelper {
         return runCatching {
             cloudinary.url()
                 .secure(true)
-                .resourceType(resourceType)
+                .resourceType(deliveryResourceType)
                 .signed(true)
                 .generate(publicId)
         }.getOrElse { fileUrl }

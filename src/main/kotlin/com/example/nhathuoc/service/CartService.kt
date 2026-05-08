@@ -69,6 +69,13 @@ class CartService {
                 ?: throw IllegalArgumentException("Product not found or inactive")
 
             val productStock = product[ProductsTable.stock]
+            val riskClassification = product[ProductsTable.riskClassification].uppercase()
+            if (riskClassification == "C" || riskClassification == "D") {
+                throw IllegalArgumentException(
+                    "Sản phẩm loại $riskClassification cần tư vấn/ký kết trực tiếp tại nhà thuốc, không hỗ trợ đặt online"
+                )
+            }
+
             if (productStock < request.quantity) {
                 throw IllegalArgumentException("Insufficient stock. Available: $productStock")
             }
@@ -262,9 +269,14 @@ class CartService {
                 val requestedQty = row[CartItemsTable.quantity]
                 val availableStock = row[ProductsTable.stock]
                 val isActive = row[ProductsTable.isActive]
+                val riskClassification = row[ProductsTable.riskClassification].uppercase()
 
                 if (!isActive) {
                     errors.add("Product '$productName' is no longer available")
+                }
+
+                if (riskClassification == "C" || riskClassification == "D") {
+                    errors.add("Product '$productName' requires direct consultation at pharmacy")
                 }
 
                 if (requestedQty > availableStock) {

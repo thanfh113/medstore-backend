@@ -154,6 +154,12 @@ fun Route.posOrderRoutes() {
                     var subtotal = BigDecimal.ZERO
                     val orderItems = products.map { productRow ->
                         val reqItem = itemMap[productRow[ProductsTable.id]]!!.first()
+                        if (!productRow[ProductsTable.isActive] || productRow[ProductsTable.deletedAt] != null) {
+                            return@transaction Result.failure(IllegalArgumentException("Product is not available: ${productRow[ProductsTable.name]}"))
+                        }
+                        if (productRow[ProductsTable.stock] < reqItem.quantity) {
+                            return@transaction Result.failure(IllegalArgumentException("Insufficient stock for product: ${productRow[ProductsTable.name]}"))
+                        }
                         val lineTotal = productRow[ProductsTable.price].multiply(reqItem.quantity.toBigDecimal())
                         subtotal = subtotal.add(lineTotal)
                         Triple(productRow, reqItem.quantity, reqItem.unit?.trim()?.ifBlank { null } ?: productRow[ProductsTable.unit])

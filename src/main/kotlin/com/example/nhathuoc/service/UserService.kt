@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.math.BigDecimal
 import java.util.*
 
 // ─────────────────────────────────────────────────────────────
@@ -48,7 +49,13 @@ data class UserAddressDto(
     val ward: String?,
     val district: String?,
     val province: String?,
-    val isDefault: Boolean
+    val isDefault: Boolean,
+    val fullAddress: String? = null,
+    val wardCode: String? = null,
+    val provinceCode: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationSource: String = "MANUAL"
 )
 
 @Serializable
@@ -57,9 +64,15 @@ data class CreateAddressRequest(
     val recipientName: String? = null,
     val phone: String? = null,
     val address: String,
+    val fullAddress: String? = null,
     val ward: String? = null,
+    val wardCode: String? = null,
     val district: String? = null,
     val province: String? = null,
+    val provinceCode: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationSource: String = "MANUAL",
     val isDefault: Boolean = false
 )
 
@@ -69,11 +82,55 @@ data class UpdateAddressRequest(
     val recipientName: String? = null,
     val phone: String? = null,
     val address: String? = null,
+    val fullAddress: String? = null,
     val ward: String? = null,
+    val wardCode: String? = null,
     val district: String? = null,
     val province: String? = null,
+    val provinceCode: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationSource: String? = null,
     val isDefault: Boolean? = null
 )
+
+private fun ResultRow.toUserAddressDto(): UserAddressDto = UserAddressDto(
+    id = this[UserAddressesTable.id],
+    userId = this[UserAddressesTable.userId],
+    label = this[UserAddressesTable.label],
+    recipientName = this[UserAddressesTable.recipientName],
+    phone = this[UserAddressesTable.phone],
+    address = this[UserAddressesTable.address],
+    fullAddress = this[UserAddressesTable.fullAddress],
+    ward = this[UserAddressesTable.ward],
+    wardCode = this[UserAddressesTable.wardCode],
+    district = this[UserAddressesTable.district],
+    province = this[UserAddressesTable.province],
+    provinceCode = this[UserAddressesTable.provinceCode],
+    latitude = this[UserAddressesTable.latitude]?.toDouble(),
+    longitude = this[UserAddressesTable.longitude]?.toDouble(),
+    locationSource = this[UserAddressesTable.locationSource],
+    isDefault = this[UserAddressesTable.isDefault]
+)
+
+private fun buildFullAddress(address: String, ward: String?, district: String?, province: String?): String {
+    return listOf(address, ward, district, province)
+        .mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }
+        .joinToString(", ")
+}
+
+private fun normalizedLocationSource(source: String?): String {
+    return when (source?.trim()?.uppercase()) {
+        "MAP" -> "MAP"
+        "GPS" -> "GPS"
+        else -> "MANUAL"
+    }
+}
+
+private fun Double?.toDbDecimal(): BigDecimal? = this?.let { BigDecimal.valueOf(it) }
+
+private fun activeAddressCondition(userId: String): Op<Boolean> =
+    (UserAddressesTable.userId eq userId) and (UserAddressesTable.isDeleted eq false)
 
 // ─────────────────────────────────────────────────────────────
 // SERVICE
@@ -177,22 +234,9 @@ class UserService {
         return transaction {
             UserAddressesTable
                 .selectAll()
-                .where { UserAddressesTable.userId eq userId }
+                .where { activeAddressCondition(userId) }
                 .orderBy(UserAddressesTable.isDefault to SortOrder.DESC) // Default address first
-                .map { row ->
-                    UserAddressDto(
-                        id = row[UserAddressesTable.id],
-                        userId = row[UserAddressesTable.userId],
-                        label = row[UserAddressesTable.label],
-                        recipientName = row[UserAddressesTable.recipientName],
-                        phone = row[UserAddressesTable.phone],
-                        address = row[UserAddressesTable.address],
-                        ward = row[UserAddressesTable.ward],
-                        district = row[UserAddressesTable.district],
-                        province = row[UserAddressesTable.province],
-                        isDefault = row[UserAddressesTable.isDefault]
-                    )
-                }
+                .map { row -> row.toUserAddressDto() }
         }
     }
 
@@ -203,22 +247,9 @@ class UserService {
         return transaction {
             UserAddressesTable
                 .selectAll()
-                .where { (UserAddressesTable.id eq addressId) and (UserAddressesTable.userId eq userId) }
+                .where { (UserAddressesTable.id eq addressId) and activeAddressCondition(userId) }
                 .singleOrNull()
-                ?.let { row ->
-                    UserAddressDto(
-                        id = row[UserAddressesTable.id],
-                        userId = row[UserAddressesTable.userId],
-                        label = row[UserAddressesTable.label],
-                        recipientName = row[UserAddressesTable.recipientName],
-                        phone = row[UserAddressesTable.phone],
-                        address = row[UserAddressesTable.address],
-                        ward = row[UserAddressesTable.ward],
-                        district = row[UserAddressesTable.district],
-                        province = row[UserAddressesTable.province],
-                        isDefault = row[UserAddressesTable.isDefault]
-                    )
-                }
+                ?.toUserAddressDto()
         }
     }
 
@@ -234,15 +265,24 @@ class UserService {
                 .singleOrNull()
                 ?: throw IllegalArgumentException("User not found")
 
-            if (request.address.isBlank()) {
+            val addressLine = request.address.trim()
+            if (addressLine.isBlank()) {
                 throw IllegalArgumentException("Address is required")
             }
 
             val addressId = UUID.randomUUID().toString()
+            val requestedFullAddress = request.fullAddress
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+            val fullAddress = if (requestedFullAddress != null && requestedFullAddress != addressLine) {
+                requestedFullAddress
+            } else {
+                buildFullAddress(addressLine, request.ward, request.district, request.province)
+            }
 
             // If this is set as default, unset other default addresses
             if (request.isDefault) {
-                UserAddressesTable.update({ UserAddressesTable.userId eq userId }) {
+                UserAddressesTable.update({ activeAddressCondition(userId) }) {
                     it[UserAddressesTable.isDefault] = false
                 }
             }
@@ -250,7 +290,7 @@ class UserService {
             // If this is the first address, make it default automatically
             val addressCount = UserAddressesTable
                 .selectAll()
-                .where { UserAddressesTable.userId eq userId }
+                .where { activeAddressCondition(userId) }
                 .count()
 
             val shouldBeDefault = request.isDefault || addressCount == 0L
@@ -261,10 +301,16 @@ class UserService {
                 it[UserAddressesTable.label] = request.label
                 it[UserAddressesTable.recipientName] = request.recipientName
                 it[UserAddressesTable.phone] = request.phone
-                it[UserAddressesTable.address] = request.address
+                it[UserAddressesTable.address] = addressLine
+                it[UserAddressesTable.fullAddress] = fullAddress
                 it[UserAddressesTable.ward] = request.ward
+                it[UserAddressesTable.wardCode] = request.wardCode
                 it[UserAddressesTable.district] = request.district
                 it[UserAddressesTable.province] = request.province
+                it[UserAddressesTable.provinceCode] = request.provinceCode
+                it[UserAddressesTable.latitude] = request.latitude.toDbDecimal()
+                it[UserAddressesTable.longitude] = request.longitude.toDbDecimal()
+                it[UserAddressesTable.locationSource] = normalizedLocationSource(request.locationSource)
                 it[UserAddressesTable.isDefault] = shouldBeDefault
             }
 
@@ -280,25 +326,31 @@ class UserService {
             // Check if address exists and belongs to user
             val existingAddress = UserAddressesTable
                 .selectAll()
-                .where { (UserAddressesTable.id eq addressId) and (UserAddressesTable.userId eq userId) }
+                .where { (UserAddressesTable.id eq addressId) and activeAddressCondition(userId) }
                 .singleOrNull()
                 ?: throw IllegalArgumentException("Address not found")
 
             // If setting as default, unset other default addresses
             if (request.isDefault == true) {
-                UserAddressesTable.update({ (UserAddressesTable.userId eq userId) and (UserAddressesTable.id neq addressId) }) {
+                UserAddressesTable.update({ activeAddressCondition(userId) and (UserAddressesTable.id neq addressId) }) {
                     it[UserAddressesTable.isDefault] = false
                 }
             }
 
-            UserAddressesTable.update({ UserAddressesTable.id eq addressId }) {
+            UserAddressesTable.update({ (UserAddressesTable.id eq addressId) and activeAddressCondition(userId) }) {
                 if (request.label != null) it[UserAddressesTable.label] = request.label
                 if (request.recipientName != null) it[UserAddressesTable.recipientName] = request.recipientName
                 if (request.phone != null) it[UserAddressesTable.phone] = request.phone
-                if (request.address != null) it[UserAddressesTable.address] = request.address
+                if (request.address != null) it[UserAddressesTable.address] = request.address.trim()
+                if (request.fullAddress != null) it[UserAddressesTable.fullAddress] = request.fullAddress.trim().takeIf { it.isNotBlank() }
                 if (request.ward != null) it[UserAddressesTable.ward] = request.ward
+                if (request.wardCode != null) it[UserAddressesTable.wardCode] = request.wardCode
                 if (request.district != null) it[UserAddressesTable.district] = request.district
                 if (request.province != null) it[UserAddressesTable.province] = request.province
+                if (request.provinceCode != null) it[UserAddressesTable.provinceCode] = request.provinceCode
+                if (request.latitude != null) it[UserAddressesTable.latitude] = request.latitude.toDbDecimal()
+                if (request.longitude != null) it[UserAddressesTable.longitude] = request.longitude.toDbDecimal()
+                if (request.locationSource != null) it[UserAddressesTable.locationSource] = normalizedLocationSource(request.locationSource)
                 if (request.isDefault != null) it[UserAddressesTable.isDefault] = request.isDefault
             }
         }
@@ -312,22 +364,25 @@ class UserService {
             // Check if address exists and belongs to user
             val existingAddress = UserAddressesTable
                 .selectAll()
-                .where { (UserAddressesTable.id eq addressId) and (UserAddressesTable.userId eq userId) }
+                .where { (UserAddressesTable.id eq addressId) and activeAddressCondition(userId) }
                 .singleOrNull()
                 ?: throw IllegalArgumentException("Address not found")
 
             val wasDefault = existingAddress[UserAddressesTable.isDefault]
 
-            // Delete the address
-            UserAddressesTable.deleteWhere {
+            // Keep historical orders valid; hide the address from user-facing lists instead.
+            UserAddressesTable.update({
                 (UserAddressesTable.id eq addressId) and (UserAddressesTable.userId eq userId)
+            }) {
+                it[UserAddressesTable.isDeleted] = true
+                it[UserAddressesTable.isDefault] = false
             }
 
             // If deleted address was default, set another address as default
             if (wasDefault) {
                 val firstRemainingAddress = UserAddressesTable
                     .selectAll()
-                    .where { UserAddressesTable.userId eq userId }
+                    .where { activeAddressCondition(userId) }
                     .limit(1)
                     .singleOrNull()
 
@@ -348,12 +403,12 @@ class UserService {
             // Check if address exists and belongs to user
             val addressExists = UserAddressesTable
                 .selectAll()
-                .where { (UserAddressesTable.id eq addressId) and (UserAddressesTable.userId eq userId) }
+                .where { (UserAddressesTable.id eq addressId) and activeAddressCondition(userId) }
                 .singleOrNull()
                 ?: throw IllegalArgumentException("Address not found")
 
             // Unset all other default addresses for this user
-            UserAddressesTable.update({ (UserAddressesTable.userId eq userId) and (UserAddressesTable.id neq addressId) }) {
+            UserAddressesTable.update({ activeAddressCondition(userId) and (UserAddressesTable.id neq addressId) }) {
                 it[UserAddressesTable.isDefault] = false
             }
 
@@ -371,22 +426,9 @@ class UserService {
         return transaction {
             UserAddressesTable
                 .selectAll()
-                .where { (UserAddressesTable.userId eq userId) and (UserAddressesTable.isDefault eq true) }
+                .where { activeAddressCondition(userId) and (UserAddressesTable.isDefault eq true) }
                 .singleOrNull()
-                ?.let { row ->
-                    UserAddressDto(
-                        id = row[UserAddressesTable.id],
-                        userId = row[UserAddressesTable.userId],
-                        label = row[UserAddressesTable.label],
-                        recipientName = row[UserAddressesTable.recipientName],
-                        phone = row[UserAddressesTable.phone],
-                        address = row[UserAddressesTable.address],
-                        ward = row[UserAddressesTable.ward],
-                        district = row[UserAddressesTable.district],
-                        province = row[UserAddressesTable.province],
-                        isDefault = row[UserAddressesTable.isDefault]
-                    )
-                }
+                ?.toUserAddressDto()
         }
     }
 }

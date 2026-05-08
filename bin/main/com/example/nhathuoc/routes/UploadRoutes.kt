@@ -2,10 +2,13 @@ package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.util.CloudinaryHelper
 import com.example.nhathuoc.util.CloudinaryHelper.UploadType
+import com.example.nhathuoc.util.Env
+import com.example.nhathuoc.util.LocalUploadStorage
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.log
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -90,6 +93,30 @@ fun Route.uploadRoutes() {
                     )
                 }
 
+                if (LocalUploadStorage.shouldStoreLocal(uploadType, ext)) {
+                    val result = try {
+                        LocalUploadStorage.save(fileBytes!!, uploadType, ext)
+                    } catch (e: IllegalArgumentException) {
+                        return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                    } catch (e: Exception) {
+                        call.application.log.error("Local upload error", e)
+                        return@post call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Upload thất bại: ${e.message}")
+                        )
+                    }
+                    return@post call.respond(
+                        HttpStatusCode.Created,
+                        UploadResponse(
+                            url = call.absoluteUrl(result.relativeUrl),
+                            publicId = result.publicId,
+                            format = result.format,
+                            resourceType = result.resourceType,
+                            bytes = result.bytes
+                        )
+                    )
+                }
+
                 // Upload lên Cloudinary
                 val result = try {
                     CloudinaryHelper.upload(fileBytes!!, uploadType, fileExtension = ext)
@@ -125,7 +152,9 @@ fun Route.uploadRoutes() {
                 val resourceType = call.request.queryParameters["resourceType"] ?: "image"
 
                 try {
-                    CloudinaryHelper.delete(publicId, resourceType)
+                    if (!LocalUploadStorage.delete(publicId)) {
+                        CloudinaryHelper.delete(publicId, resourceType)
+                    }
                     call.respond(mapOf("message" to "Đã xóa file: $publicId"))
                 } catch (e: Exception) {
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
@@ -133,4 +162,21 @@ fun Route.uploadRoutes() {
             }
         }
     }
+}
+
+private fun io.ktor.server.application.ApplicationCall.absoluteUrl(relativeUrl: String): String {
+    if (relativeUrl.startsWith("http://") || relativeUrl.startsWith("https://")) {
+        return relativeUrl
+    }
+
+    Env.get("LOCAL_PUBLIC_BASE_URL")?.trimEnd('/')?.let { publicBaseUrl ->
+        val path = if (relativeUrl.startsWith('/')) relativeUrl else "/$relativeUrl"
+        return publicBaseUrl + path
+    }
+
+    val origin = request.origin
+    val port = origin.serverPort
+    val defaultPort = (origin.scheme == "http" && port == 80) || (origin.scheme == "https" && port == 443)
+    val portPart = if (defaultPort) "" else ":$port"
+    return "${origin.scheme}://${origin.serverHost}$portPart$relativeUrl"
 }

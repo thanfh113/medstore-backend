@@ -1,15 +1,15 @@
 package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.EmployeeProfilesTable
-import com.example.nhathuoc.database.tables.ExpensesTable
+import com.example.nhathuoc.database.tables.BannersTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.RefreshTokensTable
 import com.example.nhathuoc.database.tables.RewardAccountsTable
-import com.example.nhathuoc.database.tables.UserAccountActionsTable
 import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.service.ProductDeleteRequestDto
 import com.example.nhathuoc.service.ProductService
 import com.example.nhathuoc.util.AppRoles
+import com.example.nhathuoc.util.CloudinaryHelper
 import com.example.nhathuoc.util.PasswordHelper
 import com.example.nhathuoc.util.getUserId
 import com.example.nhathuoc.util.requireRole
@@ -33,6 +33,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.SortOrder
 import java.util.UUID
 
@@ -128,6 +129,18 @@ private data class AdminReviewDeleteRequest(
     val approve: Boolean
 )
 
+@kotlinx.serialization.Serializable
+private data class AdminBannerRequest(
+    val imageUrl: String,
+    val linkUrl: String? = null,
+    val title: String? = null,
+    val description: String? = null,
+    val sortOrder: Int = 0,
+    val isActive: Boolean = true,
+    val startDt: String? = null,
+    val endDt: String? = null
+)
+
 private const val DEFAULT_EMPLOYEE_QUALIFICATION_TITLE = "Cần cập nhật hồ sơ chuyên môn"
 
 private fun String?.trimToNull(): String? = this?.trim()?.ifBlank { null }
@@ -138,15 +151,17 @@ private fun softDeletedPhone(userId: String): String = "del-${userId.take(11)}"
 
 private fun ResultRow.toEmployeeProfileDto(): AdminEmployeeProfileDto? {
     val profileId = getOrNull(EmployeeProfilesTable.id) ?: return null
+    val documentUrl = this[EmployeeProfilesTable.qualificationDocumentUrl]
+    val documentResourceType = this[EmployeeProfilesTable.qualificationDocumentResourceType]
     return AdminEmployeeProfileDto(
         id = profileId,
         qualificationTitle = this[EmployeeProfilesTable.qualificationTitle],
         qualificationSpecialty = this[EmployeeProfilesTable.qualificationSpecialty],
         qualificationInstitution = this[EmployeeProfilesTable.qualificationInstitution],
-        qualificationDocumentUrl = this[EmployeeProfilesTable.qualificationDocumentUrl],
+        qualificationDocumentUrl = documentUrl?.let { CloudinaryHelper.signedDeliveryUrl(it, documentResourceType) },
         qualificationDocumentPublicId = this[EmployeeProfilesTable.qualificationDocumentPublicId],
         qualificationDocumentType = this[EmployeeProfilesTable.qualificationDocumentType],
-        qualificationDocumentResourceType = this[EmployeeProfilesTable.qualificationDocumentResourceType],
+        qualificationDocumentResourceType = documentResourceType,
         qualificationVerified = this[EmployeeProfilesTable.qualificationVerified],
         qualificationSubmittedAt = this[EmployeeProfilesTable.qualificationSubmittedAt]?.toString(),
         qualificationVerifiedBy = this[EmployeeProfilesTable.qualificationVerifiedBy],
@@ -219,8 +234,12 @@ private fun upsertEmployeeProfile(
 
     if (request == null) return
 
-    val documentUrl = request.qualificationDocumentUrl.trimToNull()
-    val documentChanged = documentUrl != existing[EmployeeProfilesTable.qualificationDocumentUrl]
+    val requestedDocumentUrl = request.qualificationDocumentUrl.trimToNull()
+    val documentUrl = requestedDocumentUrl ?: existing[EmployeeProfilesTable.qualificationDocumentUrl]
+    val documentPublicId = request.qualificationDocumentPublicId.trimToNull()
+        ?: existing[EmployeeProfilesTable.qualificationDocumentPublicId]
+    val documentChanged = requestedDocumentUrl != null &&
+        requestedDocumentUrl != existing[EmployeeProfilesTable.qualificationDocumentUrl]
     val nextVerified = request.qualificationVerified ?: existing[EmployeeProfilesTable.qualificationVerified]
     val documentType = request.qualificationDocumentType.trimToNull()
         ?: detectDocumentType(documentUrl)
@@ -235,7 +254,7 @@ private fun upsertEmployeeProfile(
         it[EmployeeProfilesTable.qualificationSpecialty] = request.qualificationSpecialty.trimToNull()
         it[EmployeeProfilesTable.qualificationInstitution] = request.qualificationInstitution.trimToNull()
         it[EmployeeProfilesTable.qualificationDocumentUrl] = documentUrl
-        it[EmployeeProfilesTable.qualificationDocumentPublicId] = request.qualificationDocumentPublicId.trimToNull()
+        it[EmployeeProfilesTable.qualificationDocumentPublicId] = documentPublicId
         it[EmployeeProfilesTable.qualificationDocumentType] = documentType
         it[EmployeeProfilesTable.qualificationDocumentResourceType] = documentResourceType
         it[EmployeeProfilesTable.qualificationVerified] = nextVerified
@@ -274,6 +293,26 @@ private fun defaultDocumentResourceType(documentType: String?): String? {
     }
 }
 
+private fun parseAdminDateTime(value: String?): LocalDateTime? {
+    val normalized = value?.trim()?.ifBlank { null } ?: return null
+    return LocalDateTime.parse(normalized.replace(' ', 'T'))
+}
+
+private fun ResultRow.toBannerDto(): BannerDto {
+    return BannerDto(
+        id = this[BannersTable.id],
+        imageUrl = this[BannersTable.imageUrl],
+        linkUrl = this[BannersTable.linkUrl],
+        title = this[BannersTable.title],
+        description = this[BannersTable.description],
+        sortOrder = this[BannersTable.sortOrder],
+        isActive = this[BannersTable.isActive],
+        startDt = this[BannersTable.startDt]?.toString(),
+        endDt = this[BannersTable.endDt]?.toString(),
+        createdAt = this[BannersTable.createdAt].toString()
+    )
+}
+
 private fun logAccountActionInTx(
     targetUserId: String,
     actorUserId: String,
@@ -282,15 +321,8 @@ private fun logAccountActionInTx(
     metadata: String? = null,
     now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
 ) {
-    UserAccountActionsTable.insert {
-        it[id] = UUID.randomUUID().toString()
-        it[UserAccountActionsTable.targetUserId] = targetUserId
-        it[UserAccountActionsTable.actorUserId] = actorUserId
-        it[UserAccountActionsTable.action] = action
-        it[UserAccountActionsTable.reason] = reason
-        it[UserAccountActionsTable.metadata] = metadata
-        it[createdAt] = now
-    }
+    // Account audit table is intentionally removed in the simplified DATN schema.
+    // Keep this function as a compatibility hook so account operations stay unchanged.
 }
 
 fun Route.adminRoutes(
@@ -333,10 +365,7 @@ fun Route.adminRoutes(
                         .sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
                     val totalDiscount = successfulOrders.sumOf { it[OrdersTable.discount].toDouble() }
 
-                    val expenseRows = ExpensesTable.selectAll()
-                        .toList()
-                    val approvedExpenses = expenseRows.filter { it[ExpensesTable.status] == "APPROVED" }
-                    val totalExpenses = approvedExpenses.sumOf { it[ExpensesTable.amount].toDouble() }
+                    val totalExpenses = 0.0
 
                     FinanceSummaryDto(
                         shopId = null,
@@ -347,7 +376,7 @@ fun Route.adminRoutes(
                         totalExpenses = totalExpenses,
                         netProfit = grossRevenue - totalExpenses,
                         successfulOrderCount = successfulOrders.size,
-                        expenseCount = approvedExpenses.size
+                        expenseCount = 0
                     )
                 }
 
@@ -659,17 +688,87 @@ fun Route.adminRoutes(
                 call.respond(mapOf("message" to "TODO: tất cả đơn hàng"))
             }
             // Banners
+            get("/banners") {
+                call.requireRole(AppRoles.ADMIN)
+                val banners = transaction {
+                    BannersTable
+                        .selectAll()
+                        .orderBy(BannersTable.sortOrder to SortOrder.ASC)
+                        .map { it.toBannerDto() }
+                }
+                call.respond(AdminEnvelope(banners, "Get banners successfully"))
+            }
             post("/banners") {
                 call.requireRole(AppRoles.ADMIN)
-                call.respond(HttpStatusCode.Created, mapOf("message" to "TODO: thêm banner"))
+                val req = call.receive<AdminBannerRequest>()
+                if (req.imageUrl.isBlank()) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Image URL is required"))
+                }
+
+                try {
+                    val created = transaction {
+                        val id = UUID.randomUUID().toString()
+                        BannersTable.insert {
+                            it[BannersTable.id] = id
+                            it[BannersTable.imageUrl] = req.imageUrl.trim()
+                            it[BannersTable.linkUrl] = req.linkUrl.trimToNull()
+                            it[BannersTable.title] = req.title.trimToNull()
+                            it[BannersTable.description] = req.description.trimToNull()
+                            it[BannersTable.sortOrder] = req.sortOrder
+                            it[BannersTable.isActive] = req.isActive
+                            it[BannersTable.startDt] = parseAdminDateTime(req.startDt)
+                            it[BannersTable.endDt] = parseAdminDateTime(req.endDt)
+                        }
+                        BannersTable.selectAll().where { BannersTable.id eq id }.single().toBannerDto()
+                    }
+                    call.respond(HttpStatusCode.Created, AdminEnvelope(created, "Create banner successfully"))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid banner payload")))
+                }
             }
             put("/banners/{id}") {
                 call.requireRole(AppRoles.ADMIN)
-                call.respond(mapOf("message" to "TODO: sửa banner"))
+                val id = call.parameters["id"]
+                    ?: return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Banner ID is required"))
+                val req = call.receive<AdminBannerRequest>()
+                if (req.imageUrl.isBlank()) {
+                    return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Image URL is required"))
+                }
+
+                try {
+                    val updated = transaction {
+                        val exists = BannersTable.selectAll().where { BannersTable.id eq id }.count() > 0
+                        if (!exists) throw IllegalArgumentException("Banner not found")
+
+                        BannersTable.update({ BannersTable.id eq id }) {
+                            it[BannersTable.imageUrl] = req.imageUrl.trim()
+                            it[BannersTable.linkUrl] = req.linkUrl.trimToNull()
+                            it[BannersTable.title] = req.title.trimToNull()
+                            it[BannersTable.description] = req.description.trimToNull()
+                            it[BannersTable.sortOrder] = req.sortOrder
+                            it[BannersTable.isActive] = req.isActive
+                            it[BannersTable.startDt] = parseAdminDateTime(req.startDt)
+                            it[BannersTable.endDt] = parseAdminDateTime(req.endDt)
+                        }
+                        BannersTable.selectAll().where { BannersTable.id eq id }.single().toBannerDto()
+                    }
+                    call.respond(AdminEnvelope(updated, "Update banner successfully"))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid banner payload")))
+                }
             }
             delete("/banners/{id}") {
                 call.requireRole(AppRoles.ADMIN)
-                call.respond(mapOf("message" to "TODO: xoá banner"))
+                val id = call.parameters["id"]
+                    ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Banner ID is required"))
+                val deleted = transaction {
+                    BannersTable.deleteWhere { BannersTable.id eq id }
+                }
+                if (deleted == 0) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Banner not found"))
+                } else {
+                    call.respond(AdminEnvelope(mapOf("id" to id), "Delete banner successfully"))
+                }
             }
             // Rewards config
             get("/rewards/config") {

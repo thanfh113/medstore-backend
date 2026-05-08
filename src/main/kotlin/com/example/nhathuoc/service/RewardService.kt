@@ -5,6 +5,7 @@ import com.example.nhathuoc.database.tables.RewardAccountsTable
 import com.example.nhathuoc.database.tables.RewardProductsTable
 import com.example.nhathuoc.database.tables.RewardRedemptionsTable
 import com.example.nhathuoc.database.tables.RewardTransactionsTable
+import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.routes.computeCouponDiscountFromRow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -12,6 +13,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
@@ -96,6 +98,7 @@ data class AdminRewardProductDto(
 data class RewardRedemptionDto(
     val id: String,
     val userId: String,
+    val userName: String? = null,
     val rewardProductId: String,
     val productName: String,
     val productImageUrl: String? = null,
@@ -144,6 +147,14 @@ data class RewardSummaryDto(
 data class RedeemRewardRequest(
     val rewardProductId: String,
     val quantity: Int = 1
+)
+
+@Serializable
+data class RedeemRewardResultDto(
+    val redemptionId: String,
+    val rewardType: String,
+    val status: String,
+    val issuedVoucherCode: String? = null
 )
 
 @Serializable
@@ -273,7 +284,7 @@ class RewardService {
             .map(::toProductDto)
     }
 
-    fun redeemReward(userId: String, request: RedeemRewardRequest): String = transaction {
+    fun redeemReward(userId: String, request: RedeemRewardRequest): RedeemRewardResultDto = transaction {
         require(request.quantity > 0) { "Quantity must be greater than zero" }
 
         val rewardProduct = RewardProductsTable
@@ -289,7 +300,8 @@ class RewardService {
         val availableStock = rewardProduct[RewardProductsTable.stock]
         val productName = rewardProduct[RewardProductsTable.name]
         val rewardType = rewardProduct[RewardProductsTable.rewardType].uppercase()
-        if (rewardType == "VOUCHER" && rewardProduct[RewardProductsTable.couponId] == null) {
+        val couponId = rewardProduct[RewardProductsTable.couponId]
+        if (rewardType == "VOUCHER" && couponId == null) {
             throw IllegalArgumentException("Reward voucher is not linked to a coupon template")
         }
         if (availableStock < request.quantity) {
@@ -302,6 +314,13 @@ class RewardService {
             throw IllegalArgumentException("Insufficient points. Available: ${account.availablePoints}, Required: $totalPointsRequired")
         }
 
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+        val initialStatus = if (rewardType == "VOUCHER") "APPROVED" else "PROCESSING"
+        val issuedVoucherCode = if (rewardType == "VOUCHER") {
+            generateIssuedVoucherCodeInTx(couponId ?: error("Reward voucher is not linked to a coupon template"))
+        } else {
+            null
+        }
         val redemptionId = UUID.randomUUID().toString()
         RewardRedemptionsTable.insert {
             it[id] = redemptionId
@@ -309,7 +328,13 @@ class RewardService {
             it[rewardProductId] = request.rewardProductId
             it[quantity] = request.quantity
             it[pointsUsed] = totalPointsRequired
-            it[status] = "PROCESSING"
+            it[status] = initialStatus
+            if (rewardType == "VOUCHER") {
+                it[RewardRedemptionsTable.issuedVoucherCode] = issuedVoucherCode
+                it[RewardRedemptionsTable.voucherIssuedAt] = now
+                it[handledAt] = now
+                it[note] = "Voucher tự động phát mã sau khi đổi điểm"
+            }
         }
 
         RewardAccountsTable.update({ RewardAccountsTable.userId eq userId }) {
@@ -333,7 +358,26 @@ class RewardService {
             it[stock] = availableStock - request.quantity
         }
 
-        redemptionId
+        if (rewardType == "VOUCHER") {
+            notificationService.createUserNotification(
+                userId = userId,
+                title = "Voucher đổi điểm đã sẵn sàng",
+                body = if (!issuedVoucherCode.isNullOrBlank()) {
+                    "Mã $issuedVoucherCode có thể dùng ngay khi thanh toán."
+                } else {
+                    "Voucher đổi điểm của bạn có thể dùng ngay khi thanh toán."
+                },
+                type = "REWARD",
+                refId = redemptionId
+            )
+        }
+
+        RedeemRewardResultDto(
+            redemptionId = redemptionId,
+            rewardType = rewardType,
+            status = initialStatus,
+            issuedVoucherCode = issuedVoucherCode
+        )
     }
 
     fun getUserRedemptions(userId: String): List<RewardRedemptionDto> = transaction {
@@ -491,7 +535,18 @@ class RewardService {
     }
 
     fun listRedemptions(status: String? = null, limit: Int = 100): List<RewardRedemptionDto> = transaction {
-        var query = (RewardRedemptionsTable innerJoin RewardProductsTable).selectAll()
+        var query = RewardRedemptionsTable
+            .join(
+                RewardProductsTable,
+                JoinType.INNER,
+                additionalConstraint = { RewardRedemptionsTable.rewardProductId eq RewardProductsTable.id }
+            )
+            .join(
+                UsersTable,
+                JoinType.INNER,
+                additionalConstraint = { RewardRedemptionsTable.userId eq UsersTable.id }
+            )
+            .selectAll()
         status?.trim()?.uppercase()?.ifBlank { null }?.let { normalizedStatus ->
             require(normalizedStatus in validRedemptionStatuses) {
                 "Invalid status. Must be one of: ${validRedemptionStatuses.joinToString(", ")}"
@@ -502,7 +557,7 @@ class RewardService {
         query
             .orderBy(RewardRedemptionsTable.createdAt to SortOrder.DESC)
             .limit(limit.coerceIn(1, 500))
-            .map(::toRedemptionDto)
+            .map { row -> toRedemptionDto(row, row[UsersTable.fullName]) }
     }
 
     fun updateRedemptionStatus(
@@ -784,10 +839,11 @@ class RewardService {
         )
     }
 
-    private fun toRedemptionDto(row: ResultRow): RewardRedemptionDto {
+    private fun toRedemptionDto(row: ResultRow, userName: String? = null): RewardRedemptionDto {
         return RewardRedemptionDto(
             id = row[RewardRedemptionsTable.id],
             userId = row[RewardRedemptionsTable.userId],
+            userName = userName,
             rewardProductId = row[RewardRedemptionsTable.rewardProductId],
             productName = row[RewardProductsTable.name],
             productImageUrl = row[RewardProductsTable.imageUrl],

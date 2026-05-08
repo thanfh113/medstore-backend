@@ -13,6 +13,7 @@ import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.RewardRedemptionsTable
 import com.example.nhathuoc.database.tables.UserAddressesTable
 import com.example.nhathuoc.database.tables.UsersTable
+import com.example.nhathuoc.service.OrderLifecycleService
 import com.example.nhathuoc.util.requireInternalAccess
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -309,8 +310,6 @@ fun Route.internalOrderRoutes() {
                                         .orderBy(ProductImagesTable.sortOrder to SortOrder.ASC)
                                         .map { image -> image[ProductImagesTable.url] }
                                 }.orEmpty()
-                                val attributes = productId?.let(::loadOrderItemAttributes).orEmpty()
-
                                 InternalOrderDetailItemDto(
                                     id = item[OrderItemsTable.id],
                                     productId = productId,
@@ -326,7 +325,7 @@ fun Route.internalOrderRoutes() {
                                     registrationNumber = productRow?.get(ProductsTable.registrationNumber),
                                     riskClassification = productRow?.get(ProductsTable.riskClassification),
                                     imageUrls = imageUrls,
-                                    attributes = attributes
+                                    attributes = emptyMap()
                                 )
                             }
 
@@ -378,6 +377,7 @@ fun Route.internalOrderRoutes() {
 
             post("/{orderId}/status") {
                 call.requireInternalAccess()
+                val orderLifecycleService = OrderLifecycleService()
                 val orderId = call.parameters["orderId"]
                     ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Order ID is required"))
                 val request = call.receive<InternalOrderStatusUpdateRequest>()
@@ -404,6 +404,7 @@ fun Route.internalOrderRoutes() {
                         )
                     }
 
+                    val oldStatus = order[OrdersTable.status]
                     OrdersTable.update({ OrdersTable.id eq orderId }) {
                         it[status] = newStatus
                         if (newStatus == "CANCELLED" && order[OrdersTable.paymentStatus] != "COMPLETED") {
@@ -412,47 +413,21 @@ fun Route.internalOrderRoutes() {
                     }
 
                     if (newStatus == "CANCELLED") {
-                        PaymentsTable.update({
-                            (PaymentsTable.orderId eq orderId) and
-                                (PaymentsTable.status eq "PENDING")
-                        }) {
-                            it[status] = "CANCELLED"
-                        }
+                        orderLifecycleService.restoreStockOnCancel(order)
+                        orderLifecycleService.cancelPendingPayments(orderId)
+                        orderLifecycleService.revertCouponAndRewardUsage(orderId)
+                    }
 
-                        val redemption = CouponRedemptionsTable
-                            .selectAll()
-                            .where {
-                                (CouponRedemptionsTable.orderId eq orderId) and
-                                    (CouponRedemptionsTable.status eq "APPLIED")
+                    if (newStatus != oldStatus) {
+                        orderLifecycleService.notifyOrderStatusChanged(
+                            order = order,
+                            newStatus = newStatus,
+                            paymentStatus = if (newStatus == "CANCELLED" && order[OrdersTable.paymentStatus] != "COMPLETED") {
+                                "UNPAID"
+                            } else {
+                                order[OrdersTable.paymentStatus]
                             }
-                            .singleOrNull()
-
-                        if (redemption != null) {
-                            CouponRedemptionsTable.update({ CouponRedemptionsTable.id eq redemption[CouponRedemptionsTable.id] }) {
-                                it[status] = "REVERTED"
-                                it[revertedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-                            }
-
-                            CouponsTable
-                                .selectAll()
-                                .where { CouponsTable.id eq redemption[CouponRedemptionsTable.couponId] }
-                                .singleOrNull()
-                                ?.let { coupon ->
-                                    CouponsTable.update({ CouponsTable.id eq coupon[CouponsTable.id] }) {
-                                        it[usedCount] = maxOf(0, coupon[CouponsTable.usedCount] - 1)
-                                    }
-                                }
-                        }
-
-                        RewardRedemptionsTable.update({
-                            (RewardRedemptionsTable.redeemedOrderId eq orderId) and
-                                (RewardRedemptionsTable.status eq "USED")
-                        }) {
-                            it[status] = "APPROVED"
-                            it[redeemedOrderId] = null
-                            it[voucherUsedAt] = null
-                            it[updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-                        }
+                        )
                     }
 
                     InternalOrderStatusUpdateOutcome.Success(newStatus)

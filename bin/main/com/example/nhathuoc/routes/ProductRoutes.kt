@@ -14,6 +14,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -21,6 +22,7 @@ import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
+import java.text.Normalizer
 
 @Serializable
 private data class ProductImagePayload(
@@ -58,7 +60,11 @@ private data class CreateProductPayload(
     val unit: String = "Cai",
     val price: Double,
     val originalPrice: Double? = null,
+    val importPrice: Double? = null,
     val stock: Int = 0,
+    val inventoryNote: String? = null,
+    val mfgDate: String? = null,
+    val expDate: String? = null,
     val discountPct: Int = 0,
     val rewardPoints: Int = 0,
     val productType: String = "MEDICAL_SUPPLY",
@@ -86,7 +92,11 @@ private data class UpdateProductPayload(
     val unit: String? = null,
     val price: Double? = null,
     val originalPrice: Double? = null,
+    val importPrice: Double? = null,
     val stock: Int? = null,
+    val inventoryNote: String? = null,
+    val mfgDate: String? = null,
+    val expDate: String? = null,
     val discountPct: Int? = null,
     val rewardPoints: Int? = null,
     val productType: String? = null,
@@ -125,9 +135,13 @@ private data class ProductListItemResponse(
     val unit: String,
     val price: Double,
     val originalPrice: Double? = null,
+    val importPrice: Double? = null,
     val discountPct: Int,
     val rewardPoints: Int,
     val stock: Int,
+    val inventoryNote: String? = null,
+    val mfgDate: String? = null,
+    val expDate: String? = null,
     val productType: String,
     val registrationNumber: String? = null,
     val riskClassification: String,
@@ -316,6 +330,8 @@ private fun ProductDto.toAndroidProductJson(): JsonObject {
         put("attributes", attributesAsStringJson())
         put("productType", productType)
         put("registrationNumber", registrationNumber?.let(::JsonPrimitive) ?: JsonNull)
+        put("riskClassification", riskClassification)
+        put("requiresCertification", requiresCertification)
         put("isPrescription", requiresCertification)
         put("requiresConsultation", requiresConsultation)
         put("isFlashSale", isFlashSale)
@@ -351,69 +367,101 @@ private fun ProductCertificateDto.toAndroidCertificateJson(product: ProductDto):
     }
 }
 
+private val categoryDiacriticRegex = "\\p{Mn}+".toRegex()
+private val categoryNonAlphaNumericRegex = "[^a-z0-9]+".toRegex()
+
+private fun categoryKey(value: String): String {
+    val normalized = Normalizer.normalize(value.trim(), Normalizer.Form.NFD)
+        .replace(categoryDiacriticRegex, "")
+        .replace('đ', 'd')
+        .replace('Đ', 'd')
+
+    return normalized
+        .lowercase()
+        .replace(categoryNonAlphaNumericRegex, " ")
+        .trim()
+}
+
 private val publicCategoryAliases = mapOf(
-    "dụng cụ tiêm truyền" to listOf("cat-syringe", "cat-supplies"),
-    "kim tiêm" to listOf("cat-syringe"),
-    "ống xi lanh" to listOf("cat-syringe"),
-    "dây truyền dịch" to listOf("cat-supplies"),
-    "bơm tiêm" to listOf("cat-syringe"),
-    "băng gạc - cầm máu" to listOf("cat-bandage"),
-    "băng dính y tế" to listOf("cat-bandage"),
-    "gạc vô trùng" to listOf("cat-bandage"),
-    "băng cuộn" to listOf("cat-bandage"),
-    "băng keo thấm tẩm kháng sinh" to listOf("cat-bandage"),
-    "thiết bị chẩn đoán" to listOf("cat-diagnostic", "cat-monitor"),
-    "máy đo huyết áp" to listOf("cat-monitor"),
-    "nhiệt kế y tế" to listOf("cat-diagnostic"),
-    "máy đo spo2" to listOf("cat-diagnostic", "cat-monitor"),
-    "máy đo đường huyết" to listOf("cat-diagnostic", "cat-monitor"),
-    "khẩu trang - ppe" to listOf("cat-protect"),
-    "khẩu trang y tế" to listOf("cat-protect"),
-    "khẩu trang n95" to listOf("cat-protect"),
-    "quần áo bảo hộ" to listOf("cat-protect"),
-    "kính bảo hộ" to listOf("cat-protect"),
-    "thiết bị phẫu thuật" to listOf("cat-instrument"),
-    "dụng cụ vi phẫu" to listOf("cat-instrument"),
-    "kẹp phẫu thuật" to listOf("cat-instrument"),
-    "dây khâu" to listOf("cat-instrument"),
-    "van cầm máu" to listOf("cat-instrument"),
-    "chống nhiễm khuẩn" to listOf("cat-protect", "cat-supplies"),
-    "phục hồi chức năng" to listOf("cat-therapy"),
-    "nạng - xe lăn" to listOf("cat-therapy"),
-    "dụng cụ vật lý trị liệu" to listOf("cat-therapy"),
-    "nẹp chỉnh hình" to listOf("cat-therapy"),
-    "vật tư xét nghiệm" to listOf("cat-diagnostic")
+    categoryKey("Dụng cụ tiêm truyền") to listOf("cat-supplies", "cat-syringe", "cat-needle", "cat-infusion-set", "cat-tube"),
+    categoryKey("Kim tiêm") to listOf("cat-needle", "cat-syringe"),
+    categoryKey("Ống xi lanh") to listOf("cat-syringe"),
+    categoryKey("Dây truyền dịch") to listOf("cat-infusion-set", "cat-tube"),
+    categoryKey("Bơm tiêm") to listOf("cat-syringe"),
+    categoryKey("Băng gạc - Cầm máu") to listOf("cat-bandage", "cat-sterile-gauze", "cat-medical-tape", "cat-bandage-roll", "cat-antimicrobial-dressing"),
+    categoryKey("Băng dính y tế") to listOf("cat-medical-tape"),
+    categoryKey("Gạc vô trùng") to listOf("cat-sterile-gauze"),
+    categoryKey("Băng cuộn") to listOf("cat-bandage-roll"),
+    categoryKey("Băng keo thấm tẩm kháng sinh") to listOf("cat-antimicrobial-dressing"),
+    categoryKey("Thiết bị chẩn đoán") to listOf("cat-device", "cat-diagnostic", "cat-monitor", "cat-blood-pressure", "cat-thermometer", "cat-spo2", "cat-glucose-meter"),
+    categoryKey("Máy đo huyết áp") to listOf("cat-blood-pressure", "cat-monitor"),
+    categoryKey("Nhiệt kế y tế") to listOf("cat-thermometer"),
+    categoryKey("Máy đo SpO2") to listOf("cat-spo2", "cat-monitor"),
+    categoryKey("Máy đo đường huyết") to listOf("cat-glucose-meter", "cat-diagnostic"),
+    categoryKey("Khẩu trang - PPE") to listOf("cat-protect", "cat-mask", "cat-n95-mask", "cat-gloves", "cat-protective-clothing", "cat-goggles"),
+    categoryKey("Khẩu trang y tế") to listOf("cat-mask", "cat-protect"),
+    categoryKey("Khẩu trang N95") to listOf("cat-n95-mask", "cat-protect"),
+    categoryKey("Găng tay y tế") to listOf("cat-gloves", "cat-protect"),
+    categoryKey("Quần áo bảo hộ") to listOf("cat-protective-clothing", "cat-protect"),
+    categoryKey("Kính bảo hộ") to listOf("cat-goggles", "cat-protect"),
+    categoryKey("Thiết bị phẫu thuật") to listOf("cat-instrument", "cat-surgical-tools", "cat-forceps", "cat-suture", "cat-hemostatic-valve"),
+    categoryKey("Dụng cụ vi phẫu") to listOf("cat-surgical-tools", "cat-instrument"),
+    categoryKey("Kẹp phẫu thuật") to listOf("cat-forceps", "cat-instrument"),
+    categoryKey("Dây khâu") to listOf("cat-suture", "cat-instrument"),
+    categoryKey("Van cầm máu") to listOf("cat-hemostatic-valve", "cat-instrument"),
+    categoryKey("Chống nhiễm khuẩn") to listOf("cat-infection-control", "cat-sanitizer", "cat-disinfectant", "cat-sterilization"),
+    categoryKey("Phục hồi chức năng") to listOf("cat-therapy", "cat-crutch-wheelchair", "cat-physio-tools", "cat-orthopedic-brace"),
+    categoryKey("Nạng - Xe lăn") to listOf("cat-crutch-wheelchair", "cat-therapy"),
+    categoryKey("Dụng cụ vật lý trị liệu") to listOf("cat-physio-tools", "cat-therapy"),
+    categoryKey("Nẹp chỉnh hình") to listOf("cat-orthopedic-brace", "cat-therapy"),
+    categoryKey("Vật tư xét nghiệm") to listOf("cat-lab", "cat-test-kit", "cat-lab-consumables", "cat-sample-container")
 )
 
 private fun resolvePublicCategoryIds(rawCategory: String?): List<String>? {
     val raw = rawCategory?.trim()?.takeIf { it.isNotBlank() } ?: return null
-    publicCategoryAliases[raw.lowercase()]?.let { return it }
+    publicCategoryAliases[categoryKey(raw)]?.let { return it }
 
     return transaction {
+        data class CategoryLookup(
+            val id: String,
+            val parentId: String?,
+            val aliases: List<String>
+        )
+
         val categories = CategoriesTable
             .selectAll()
-            .map {
-                Triple(
+            .mapNotNull {
+                if (!it[CategoriesTable.isActive] || it[CategoriesTable.deletedAt] != null) {
+                    return@mapNotNull null
+                }
+
+                CategoryLookup(
                     it[CategoriesTable.id],
                     it[CategoriesTable.parentId],
-                    listOf(it[CategoriesTable.slug], it[CategoriesTable.name])
+                    listOfNotNull(it[CategoriesTable.slug], it[CategoriesTable.name]).map(::categoryKey)
                 )
             }
-        val matchedId = categories
-            .firstOrNull { (id, _, aliases) ->
-                id == raw || aliases.any { it?.equals(raw, ignoreCase = true) == true }
-            }
-            ?.first
-            ?: return@transaction listOf(raw)
 
-        val result = linkedSetOf(matchedId)
+        val rawKey = categoryKey(raw)
+        val matchedIds = categories
+            .filter { category ->
+                category.id.equals(raw, ignoreCase = true) || rawKey in category.aliases
+            }
+            .map { it.id }
+
+        if (matchedIds.isEmpty()) {
+            return@transaction listOf(raw)
+        }
+
+        val result = linkedSetOf<String>()
+        result.addAll(matchedIds)
         var added: Boolean
         do {
             added = false
             categories
-                .filter { (_, parentId, _) -> parentId in result }
-                .forEach { (id, _, _) ->
-                    if (result.add(id)) added = true
+                .filter { it.parentId in result }
+                .forEach { category ->
+                    if (result.add(category.id)) added = true
                 }
         } while (added)
         result.toList()
@@ -435,9 +483,13 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
         unit = unit,
         price = price.toDouble(),
         originalPrice = originalPrice?.toDouble(),
+        importPrice = importPrice?.toDouble(),
         discountPct = discountPct,
         rewardPoints = rewardPoints,
         stock = stock,
+        inventoryNote = inventoryNote,
+        mfgDate = mfgDate?.toString(),
+        expDate = expDate?.toString(),
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
@@ -474,7 +526,11 @@ private fun CreateProductPayload.toServiceRequest(): CreateProductRequest {
         unit = unit,
         price = BigDecimal.valueOf(price),
         originalPrice = originalPrice?.let { BigDecimal.valueOf(it) },
+        importPrice = importPrice?.let { BigDecimal.valueOf(it) },
         stock = stock,
+        inventoryNote = inventoryNote,
+        mfgDate = mfgDate?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
+        expDate = expDate?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
         discountPct = discountPct,
         rewardPoints = rewardPoints,
         productType = productType,
@@ -524,7 +580,11 @@ private fun UpdateProductPayload.toServiceRequest(): UpdateProductRequest {
         unit = unit,
         price = price?.let { BigDecimal.valueOf(it) },
         originalPrice = originalPrice?.let { BigDecimal.valueOf(it) },
+        importPrice = importPrice?.let { BigDecimal.valueOf(it) },
         stock = stock,
+        inventoryNote = inventoryNote,
+        mfgDate = mfgDate?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
+        expDate = expDate?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) },
         discountPct = discountPct,
         rewardPoints = rewardPoints,
         productType = productType,
@@ -917,7 +977,7 @@ fun Route.productRoutes() {
                 }
             }
 
-            // POST /api/v1/products/{id}/delete-request - employee submits request for admin approval
+            // POST /api/v1/products/{id}/delete-request - compatibility endpoint; product is archived directly
             post("/{id}/delete-request") {
                 try {
                     val (principal, shopId) = call.requireInternalAccess()
@@ -941,7 +1001,7 @@ fun Route.productRoutes() {
                         HttpStatusCode.Created,
                         ProductMutationResponse(
                             data = ProductIdResponse(id = requestId),
-                            message = "Delete request submitted and waiting for admin approval"
+                            message = "Product archived successfully"
                         )
                     )
                 } catch (e: IllegalArgumentException) {
@@ -949,7 +1009,7 @@ fun Route.productRoutes() {
                 } catch (e: Exception) {
                     call.respond(
                         HttpStatusCode.InternalServerError,
-                        mapOf("error" to "Failed to submit delete request: ${e.message}")
+                        mapOf("error" to "Failed to archive product: ${e.message}")
                     )
                 }
             }
