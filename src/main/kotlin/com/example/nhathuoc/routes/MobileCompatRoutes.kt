@@ -5,11 +5,13 @@ import com.example.nhathuoc.database.tables.CategoriesTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.PaymentsTable
+import com.example.nhathuoc.database.tables.ProductImagesTable
 import com.example.nhathuoc.plugins.NotFoundException
 import com.example.nhathuoc.service.CheckoutRequest
 import com.example.nhathuoc.service.CheckoutService
 import com.example.nhathuoc.service.CreateAddressRequest
 import com.example.nhathuoc.service.OrderLifecycleService
+import com.example.nhathuoc.service.RewardService
 import com.example.nhathuoc.service.UpdateAddressRequest
 import com.example.nhathuoc.service.UpdateUserProfileRequest
 import com.example.nhathuoc.service.UserAddressDto
@@ -32,6 +34,7 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -148,6 +151,7 @@ private data class CompatOrderItemDto(
     val productId: String,
     val name: String,
     val product: String? = null,
+    val imageUrl: String? = null,
     val quantity: Int,
     val unit: String,
     val price: Double,
@@ -297,6 +301,7 @@ fun Route.mobileCompatRoutes() {
     val userService = UserService()
     val checkoutService = CheckoutService()
     val orderLifecycleService = OrderLifecycleService()
+    val rewardService = RewardService()
 
     authenticate("auth-jwt") {
         route("/user") {
@@ -461,10 +466,50 @@ fun Route.mobileCompatRoutes() {
                     }
 
                     val total = base.count().toInt()
-                    val orders = base
+                    val orderRows = base
                         .orderBy(OrdersTable.createdAt to SortOrder.DESC)
                         .limit(limit, offset)
-                        .map { row ->
+                        .toList()
+
+                    val orderIds = orderRows.map { it[OrdersTable.id] }
+
+                    // Fetch items + first image per product in one pass
+                    val itemsByOrder = if (orderIds.isEmpty()) emptyMap() else {
+                        val rawItems = OrderItemsTable.selectAll()
+                            .where { OrderItemsTable.orderId inList orderIds }
+                            .toList()
+
+                        val productIds = rawItems.mapNotNull { it[OrderItemsTable.productId] }.distinct()
+
+                        val primaryImages = if (productIds.isEmpty()) emptyMap() else {
+                            ProductImagesTable.selectAll()
+                                .where { ProductImagesTable.productId inList productIds }
+                                .groupBy { it[ProductImagesTable.productId] }
+                                .mapValues { (_, rows) ->
+                                    rows.minByOrNull { it[ProductImagesTable.sortOrder] }?.get(ProductImagesTable.url)
+                                }
+                        }
+
+                        rawItems.groupBy { it[OrderItemsTable.orderId] }
+                            .mapValues { (_, rows) ->
+                                rows.map { r ->
+                                    val pid = r[OrderItemsTable.productId] ?: ""
+                                    CompatOrderItemDto(
+                                        id = r[OrderItemsTable.id],
+                                        orderId = r[OrderItemsTable.orderId],
+                                        productId = pid,
+                                        name = r[OrderItemsTable.name],
+                                        imageUrl = primaryImages[pid],
+                                        quantity = r[OrderItemsTable.quantity],
+                                        unit = r[OrderItemsTable.unit],
+                                        price = r[OrderItemsTable.price].toDouble(),
+                                        totalPrice = r[OrderItemsTable.price].toDouble() * r[OrderItemsTable.quantity]
+                                    )
+                                }
+                            }
+                    }
+
+                    val orders = orderRows.map { row ->
                             CompatOrderDto(
                                 id = row[OrdersTable.id],
                                 orderCode = row[OrdersTable.orderCode],
@@ -473,7 +518,7 @@ fun Route.mobileCompatRoutes() {
                                 pickupType = row[OrdersTable.pickupType] ?: "DELIVERY",
                                 branchId = row[OrdersTable.branchId],
                                 addressId = row[OrdersTable.addressId],
-                                items = emptyList(),
+                                items = itemsByOrder[row[OrdersTable.id]] ?: emptyList(),
                                 subtotal = row[OrdersTable.subtotal]?.toDouble(),
                                 shippingFee = row[OrdersTable.shippingFee].toDouble(),
                                 discount = row[OrdersTable.discount].toDouble(),
@@ -523,6 +568,7 @@ fun Route.mobileCompatRoutes() {
                         productId = it.productId ?: "",
                         name = it.productName,
                         product = null,
+                        imageUrl = null,
                         quantity = it.quantity,
                         unit = it.unit ?: "Cái",
                         price = it.price.toDouble(),
@@ -635,6 +681,15 @@ fun Route.mobileCompatRoutes() {
                         if (method == "COD") {
                             it[OrdersTable.paymentStatus] = "COMPLETED"
                         }
+                    }
+                    val pointsEarned = order[OrdersTable.pointsEarned]
+                    if (pointsEarned > 0) {
+                        rewardService.earnPoints(
+                            userId = userId,
+                            points = pointsEarned,
+                            orderId = orderId,
+                            description = "Điểm thưởng từ đơn hàng #${orderId.takeLast(8).uppercase()}"
+                        )
                     }
                     orderLifecycleService.notifyOrderStatusChanged(order, "DELIVERED", if (method == "COD") "COMPLETED" else order[OrdersTable.paymentStatus])
                 }

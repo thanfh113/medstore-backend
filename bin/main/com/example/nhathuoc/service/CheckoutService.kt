@@ -247,12 +247,15 @@ class CheckoutService {
                 }
             val discount = promotion?.discountAmount ?: BigDecimal.ZERO
 
-            // Reward points can only offset merchandise value after discount.
-            val maxRewardPointsApplicable = ((subtotal - discount).coerceAtLeast(BigDecimal.ZERO) / BigDecimal(1000))
+            // Reward points can only offset up to 50% merchandise value after discount.
+            // 1 point = 1 VND. Earning points is still handled separately by RewardService.
+            val merchandiseAfterDiscount = (subtotal - discount).coerceAtLeast(BigDecimal.ZERO)
+            val maxRewardPointsApplicable = merchandiseAfterDiscount
+                .multiply(BigDecimal("0.5"))
+                .setScale(0, RoundingMode.DOWN)
                 .toInt()
-                .coerceAtLeast(0)
             val appliedRewardPoints = useRewardPoints.coerceIn(0, maxRewardPointsApplicable)
-            val pointsValue = BigDecimal(appliedRewardPoints) * BigDecimal(1000)
+            val pointsValue = BigDecimal(appliedRewardPoints)
 
             val shipping = calculateShippingFee(subtotal, address, pickupType)
 

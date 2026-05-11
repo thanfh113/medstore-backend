@@ -11,6 +11,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.*
 
 data class ProductDto(
@@ -253,6 +254,18 @@ class ProductService {
         return riskClassification == "C" || riskClassification == "D"
     }
 
+    private fun calculateDiscountPct(originalPrice: BigDecimal?, price: BigDecimal): Int {
+        if (originalPrice == null || originalPrice <= BigDecimal.ZERO || price <= BigDecimal.ZERO || originalPrice <= price) {
+            return 0
+        }
+        return originalPrice
+            .subtract(price)
+            .multiply(BigDecimal(100))
+            .divide(originalPrice, 0, RoundingMode.HALF_UP)
+            .toInt()
+            .coerceIn(0, 99)
+    }
+
     /**
      * Get products with filtering and pagination
      */
@@ -261,6 +274,7 @@ class ProductService {
         categoryId: String? = null,
         categoryIds: List<String>? = null,
         brand: String? = null,
+        search: String? = null,
         minPrice: BigDecimal? = null,
         maxPrice: BigDecimal? = null,
         sortBy: String = "name",
@@ -280,6 +294,13 @@ class ProductService {
             }
             if (brand != null) {
                 query = query.andWhere { ProductsTable.brand eq brand }
+            }
+            if (!search.isNullOrBlank()) {
+                val kw = "%${search.trim().lowercase()}%"
+                query = query.andWhere {
+                    (ProductsTable.name.lowerCase() like kw) or
+                    (ProductsTable.brand.lowerCase() like kw)
+                }
             }
             if (minPrice != null) {
                 query = query.andWhere { ProductsTable.price greaterEq minPrice }
@@ -314,7 +335,8 @@ class ProductService {
 
             val productsWithImages = products.map { product ->
                 product.copy(
-                    images = getProductImages(product.id)
+                    images = getProductImages(product.id),
+                    certificates = getProductCertificates(product.id)
                 )
             }
 
@@ -372,6 +394,7 @@ class ProductService {
             val slug = generateSlug(request.name, productId)
             val riskClassification = normalizeRiskClassification(request.riskClassification)
             val directConsultationOnly = isDirectConsultationOnly(riskClassification)
+            val discountPct = calculateDiscountPct(request.originalPrice, request.price)
 
             // Stock is stored directly on products after simplifying inventory.
             ProductsTable.insert {
@@ -389,7 +412,7 @@ class ProductService {
                 it[ProductsTable.price] = request.price
                 it[ProductsTable.originalPrice] = request.originalPrice
                 it[ProductsTable.importPrice] = request.importPrice
-                it[ProductsTable.discountPct] = request.discountPct
+                it[ProductsTable.discountPct] = discountPct
                 it[ProductsTable.rewardPoints] = request.rewardPoints
                 it[ProductsTable.stock] = request.stock.coerceAtLeast(0)
                 it[ProductsTable.inventoryNote] = request.inventoryNote
@@ -433,6 +456,9 @@ class ProductService {
                 ?.let(::normalizeRiskClassification)
                 ?: product[ProductsTable.riskClassification]
             val directConsultationOnly = isDirectConsultationOnly(nextRiskClassification)
+            val nextPrice = request.price ?: product[ProductsTable.price]
+            val nextOriginalPrice = request.originalPrice ?: product[ProductsTable.originalPrice]
+            val nextDiscountPct = calculateDiscountPct(nextOriginalPrice, nextPrice)
 
             // Update product basic info
             ProductsTable.update({ ProductsTable.id eq productId }) {
@@ -457,7 +483,7 @@ class ProductService {
                 request.inventoryNote?.let { value -> it[ProductsTable.inventoryNote] = value }
                 request.mfgDate?.let { value -> it[ProductsTable.mfgDate] = value }
                 request.expDate?.let { value -> it[ProductsTable.expDate] = value }
-                request.discountPct?.let { value -> it[ProductsTable.discountPct] = value }
+                it[ProductsTable.discountPct] = nextDiscountPct
                 request.rewardPoints?.let { value -> it[ProductsTable.rewardPoints] = value }
                 request.registrationNumber?.let { value -> it[ProductsTable.registrationNumber] = value }
                 request.riskClassification?.let { _ -> it[ProductsTable.riskClassification] = nextRiskClassification }

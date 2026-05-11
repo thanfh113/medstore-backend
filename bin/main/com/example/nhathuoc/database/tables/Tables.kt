@@ -461,22 +461,6 @@ object RewardRedemptionsTable : Table("reward_redemptions") {
 }
 
 // ─────────────────────────────────────────────────────────────
-// PRESCRIPTIONS
-// ─────────────────────────────────────────────────────────────
-
-object PrescriptionsTable : Table("prescriptions") {
-    val id                   = varchar("id", 36)
-    val userId               = varchar("user_id", 36).references(UsersTable.id)
-    val orderId              = varchar("order_id", 36).references(OrdersTable.id).nullable()
-    val imageUrl             = text("image_url")
-    val note                 = text("note").nullable()
-    val status               = varchar("status", 20).default("PENDING")
-    val cloudinaryPublicId   = varchar("cloudinary_public_id", 255).nullable()
-    val createdAt            = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-// ─────────────────────────────────────────────────────────────
 // AI CONVERSATIONS
 // ─────────────────────────────────────────────────────────────
 
@@ -828,81 +812,3 @@ object ProductAttributeValuesTable : Table("product_attribute_values") {
 // ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────
-// MEDICAL CONSULTATION SYSTEM
-// ─────────────────────────────────────────────────────────────
-
-object DoctorsTable : Table("doctors") {
-    val id                  = varchar("id", 36)
-    val name                = varchar("name", 100)
-    val specialization      = varchar("specialization", 100)     // Nhi khoa, Tim mạch, Chuyên khoa, etc
-    val yearsOfExperience   = integer("years_of_experience").default(0)
-    val bio                 = text("bio").nullable()
-    val avatarUrl           = varchar("avatar_url", 500).nullable()
-    val phone               = varchar("phone", 20).nullable()
-    val email               = varchar("email", 100).nullable()
-    val licenseNumber       = varchar("license_number", 100).nullable()
-    val qualificationsJson  = text("qualifications_json").nullable()  // JSON array
-    val isActive            = bool("is_active").default(true)
-    val consultationFee     = decimal("consultation_fee", 10, 2).default(50000.toBigDecimal())
-    val averageRating       = decimal("average_rating", 3, 1).default(0.toBigDecimal())
-    val totalConsultations  = integer("total_consultations").default(0)
-    val createdAt           = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt           = datetime("updated_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-object ConsultationsTable : Table("consultations") {
-    val id                  = varchar("id", 36)
-    val consultationCode    = varchar("consultation_code", 20).uniqueIndex()
-    val doctorId            = varchar("doctor_id", 36).references(DoctorsTable.id)
-    val userId              = varchar("user_id", 36).references(UsersTable.id)
-    val scheduledAt         = datetime("scheduled_at")
-    val startedAt           = datetime("started_at").nullable()
-    val endedAt             = datetime("ended_at").nullable()
-    val status              = varchar("status", 20).default("SCHEDULED")  // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
-    val sessionType         = varchar("session_type", 20).default("VIDEO")  // VIDEO, CHAT, AUDIO
-    val videoCallUrl        = varchar("video_call_url", 500).nullable()   // Jitsi or Agora link
-    val videoCallType       = varchar("video_call_type", 20).nullable()    // JITSI, AGORA, etc
-    val notes               = text("notes").nullable()
-    val doctorNotes         = text("doctor_notes").nullable()
-    val duration            = integer("duration").nullable()              // minutes
-    val fee                 = decimal("fee", 10, 2)
-    val paymentStatus       = varchar("payment_status", 20).default("UNPAID")  // UNPAID, PAID, REFUNDED
-    val orderId             = varchar("order_id", 36).references(OrdersTable.id).nullable()  // Link to order if paid
-    val cancellationReason  = text("cancellation_reason").nullable()
-    val createdAt           = datetime("created_at").defaultExpression(CurrentDateTime)
-    val updatedAt           = datetime("updated_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}
-
-object ConsultationRatingsTable : Table("consultation_ratings") {
-    val id                  = varchar("id", 36)
-    val consultationId      = varchar("consultation_id", 36).references(ConsultationsTable.id)
-    val userId              = varchar("user_id", 36).references(UsersTable.id)
-    val doctorId            = varchar("doctor_id", 36).references(DoctorsTable.id)
-    val rating              = integer("rating")                    // 1-5 stars
-    val comment             = text("comment").nullable()
-    val createdAt           = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        uniqueIndex(consultationId)  // One rating per consultation
-    }
-}
-
-object ConsultationMessagesTable : Table("consultation_messages") {
-    val id                  = varchar("id", 36)
-    val consultationId      = varchar("consultation_id", 36).references(ConsultationsTable.id)
-    val senderId            = varchar("sender_id", 36).references(UsersTable.id)  // Either doctor or patient
-    val messageType         = varchar("message_type", 20).default("TEXT")         // TEXT, IMAGE, PRESCRIPTION, FILE
-    val message             = text("message")
-    val imageUrl            = varchar("image_url", 500).nullable()
-    val fileUrl             = varchar("file_url", 500).nullable()
-    val prescriptionId      = varchar("prescription_id", 36).nullable()  // Reference to external prescription if any
-    val createdAt           = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-}

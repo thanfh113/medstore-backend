@@ -1,6 +1,8 @@
 package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.CategoriesTable
+import com.example.nhathuoc.database.tables.OrderItemsTable
+import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.service.*
 import com.example.nhathuoc.util.AppRoles
 import com.example.nhathuoc.util.CloudinaryHelper
@@ -22,6 +24,7 @@ import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.Normalizer
 
 @Serializable
@@ -153,7 +156,24 @@ private data class ProductListItemResponse(
     val flashSaleEnd: String? = null,
     val createdAt: String,
     val updatedAt: String,
-    val images: List<ProductImageResponse> = emptyList()
+    val images: List<ProductImageResponse> = emptyList(),
+    val certificates: List<ProductCertificateResponse> = emptyList()
+)
+
+@Serializable
+private data class ProductCertificateResponse(
+    val id: String? = null,
+    val type: String = "MOH_LICENSE",
+    val name: String,
+    val fileUrl: String,
+    val fileType: String = "IMAGE",
+    val publicId: String? = null,
+    val resourceType: String = "image",
+    val thumbnailUrl: String? = null,
+    val issueDate: String? = null,
+    val expireDate: String? = null,
+    val issuer: String? = null,
+    val isActive: Boolean = true
 )
 
 @Serializable
@@ -170,6 +190,17 @@ private data class ProductListEnvelopeResponse(
     val pagination: ProductPaginationResponse,
     val message: String
 )
+
+private fun ProductDto.effectiveDiscountPct(): Int {
+    val original = originalPrice ?: return discountPct.coerceIn(0, 99)
+    if (original <= BigDecimal.ZERO || price <= BigDecimal.ZERO || original <= price) return 0
+    return original
+        .subtract(price)
+        .multiply(BigDecimal(100))
+        .divide(original, 0, RoundingMode.HALF_UP)
+        .toInt()
+        .coerceIn(0, 99)
+}
 
 @Serializable
 private data class ProductIdResponse(
@@ -225,7 +256,7 @@ private fun ProductDto.toDetailJson(): JsonObject {
         put("unit", unit)
         put("price", JsonPrimitive(price.toDouble()))
         put("originalPrice", originalPrice?.let { JsonPrimitive(it.toDouble()) } ?: JsonNull)
-        put("discountPct", discountPct)
+        put("discountPct", effectiveDiscountPct())
         put("rewardPoints", rewardPoints)
         put("stock", stock)
         put("productType", productType)
@@ -311,7 +342,7 @@ private fun ProductDto.toAndroidProductJson(): JsonObject {
         put("origin", effectiveOrigin)
         put("price", JsonPrimitive(price.toDouble()))
         put("originalPrice", originalPrice?.let { JsonPrimitive(it.toDouble()) } ?: JsonNull)
-        put("discountPct", discountPct)
+        put("discountPct", effectiveDiscountPct())
         put("unit", unit)
         put("sku", sku?.let(::JsonPrimitive) ?: JsonNull)
         put("description", description ?: shortDescription ?: "")
@@ -484,7 +515,7 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
         price = price.toDouble(),
         originalPrice = originalPrice?.toDouble(),
         importPrice = importPrice?.toDouble(),
-        discountPct = discountPct,
+        discountPct = effectiveDiscountPct(),
         rewardPoints = rewardPoints,
         stock = stock,
         inventoryNote = inventoryNote,
@@ -508,6 +539,22 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
                 mediaType = it.mediaType,
                 publicId = it.publicId,
                 sortOrder = it.sortOrder
+            )
+        },
+        certificates = certificates.filter { it.isActive }.map {
+            ProductCertificateResponse(
+                id = it.id,
+                type = it.type,
+                name = it.name,
+                fileUrl = it.fileUrl,
+                fileType = it.fileType,
+                publicId = it.publicId,
+                resourceType = it.resourceType,
+                thumbnailUrl = it.thumbnailUrl,
+                issueDate = it.issueDate,
+                expireDate = it.expireDate,
+                issuer = it.issuer,
+                isActive = it.isActive
             )
         }
     )
@@ -630,6 +677,7 @@ fun Route.productRoutes() {
             try {
                 val categoryIds = resolvePublicCategoryIds(call.parameters["category"])
                 val brand = call.parameters["brand"]
+                val search = call.parameters["search"]
                 val minPrice = call.parameters["minPrice"]?.toBigDecimalOrNull()
                 val maxPrice = call.parameters["maxPrice"]?.toBigDecimalOrNull()
                 val sortBy = call.parameters["sortBy"] ?: "name"
@@ -646,6 +694,7 @@ fun Route.productRoutes() {
                 val response = productService.getProducts(
                     categoryIds = categoryIds,
                     brand = brand,
+                    search = search,
                     minPrice = minPrice,
                     maxPrice = maxPrice,
                     sortBy = sortBy,
@@ -705,7 +754,13 @@ fun Route.productRoutes() {
                     onlyActive = true
                 )
                 val products = response.products
-                    .filter { it.isFlashSale }
+                    .filter { it.stock > 0 }
+                    .filter { it.isFlashSale || it.effectiveDiscountPct() > 0 }
+                    .sortedWith(
+                        compareByDescending<ProductDto> { it.isFlashSale }
+                            .thenByDescending { it.effectiveDiscountPct() }
+                            .thenByDescending { it.stock }
+                    )
                     .take(20)
 
                 val nowIso = Clock.System.now().toString()
@@ -734,15 +789,41 @@ fun Route.productRoutes() {
         get("/best-sellers") {
             try {
                 val period = call.parameters["period"]?.takeIf { it.isNotBlank() } ?: "week"
+                val soldQuantities = transaction {
+                    val validOrderIds = OrdersTable
+                        .selectAll()
+                        .filter { row ->
+                            row[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")
+                        }
+                        .map { row -> row[OrdersTable.id] }
+                        .toSet()
+
+                    val sales = mutableMapOf<String, Int>()
+                    OrderItemsTable.selectAll().forEach { row ->
+                        val productId = row[OrderItemsTable.productId] ?: return@forEach
+                        if (row[OrderItemsTable.orderId] in validOrderIds) {
+                            sales[productId] = (sales[productId] ?: 0) + row[OrderItemsTable.quantity]
+                        }
+                    }
+                    sales
+                }
                 val response = productService.getProducts(
                     sortBy = "created_at",
                     page = 1,
-                    limit = 20,
+                    limit = 200,
                     onlyActive = true
                 )
+                val products = response.products
+                    .filter { it.stock > 0 }
+                    .sortedWith(
+                        compareByDescending<ProductDto> { soldQuantities[it.id] ?: 0 }
+                            .thenByDescending { it.stock }
+                            .thenByDescending { it.effectiveDiscountPct() }
+                    )
+                    .take(20)
                 val responseJson = buildJsonObject {
                     putJsonArray("products") {
-                        response.products.forEach { product ->
+                        products.forEach { product ->
                             add(product.toAndroidProductJson())
                         }
                     }

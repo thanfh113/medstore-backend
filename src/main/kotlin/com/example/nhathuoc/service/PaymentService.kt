@@ -198,7 +198,9 @@ private data class ZaloPayCallbackData(
 @Serializable
 private data class ZaloPayPendingMetadata(
     val lastQueryAtEpochMs: Long? = null,
-    val redirectSeenAtEpochMs: Long? = null
+    val redirectSeenAtEpochMs: Long? = null,
+    val paymentUrl: String? = null,
+    val qrContent: String? = null
 )
 
 data class ZaloPayCallbackAck(
@@ -371,7 +373,20 @@ class PaymentService {
             return reusablePayment
         }
 
-        val createdPayment = createMoMoPayment(prepared)
+        val createdPayment = try {
+            createMoMoPayment(prepared)
+        } catch (e: Exception) {
+            if (isDuplicateMoMoOrder(e)) {
+                val fallback = transaction {
+                    findLatestPayment(prepared.internalOrderId, "MOMO")
+                        ?.takeIf { it[PaymentsTable.status] != "COMPLETED" }
+                        ?.let { buildReusableMoMoResponse(it) }
+                        ?.also { markOrderPaymentPending(prepared.internalOrderId, "MOMO") }
+                }
+                if (fallback != null) return fallback
+            }
+            throw e
+        }
         transaction {
             upsertPendingPayment(
                 orderId = prepared.internalOrderId,
@@ -401,6 +416,14 @@ class PaymentService {
             val order = getOwnedOrderForPayment(userId, orderId)
             val orderCode = order[OrdersTable.orderCode]
             val amount = normalizePaymentAmount(order[OrdersTable.total])
+            val existingPayment = findLatestPayment(orderId, "ZALOPAY")
+            if (existingPayment != null && existingPayment[PaymentsTable.status] != "COMPLETED") {
+                val reusable = buildReusableZaloPayResponse(existingPayment)
+                if (reusable != null) {
+                    markOrderPaymentPending(orderId, "ZALOPAY")
+                    return@transaction reusable
+                }
+            }
             val transId = buildZaloAppTransId()
             val appTime = System.currentTimeMillis()
             val item = "[]"
@@ -482,7 +505,10 @@ class PaymentService {
                 method = "ZALOPAY",
                 amount = BigDecimal(amount),
                 transactionId = transId,
-                gatewayResponse = buildPendingZaloMetadata()
+                gatewayResponse = buildPendingZaloMetadata(
+                    paymentUrl = paymentUrl,
+                    qrContent = paymentQrCode
+                )
             )
             markOrderPaymentPending(orderId, "ZALOPAY")
 
@@ -578,7 +604,30 @@ class PaymentService {
                             }
                         }
                         println("DEBUG: Created MoMo payment request - requestId=${prepared.requestId}")
-                        val createdPayment = createMoMoPayment(prepared)
+                        val createdPayment = try {
+                            createMoMoPayment(prepared)
+                        } catch (e: Exception) {
+                            if (isDuplicateMoMoOrder(e)) {
+                                val fallbackPayment = findLatestPayment(orderId, "MOMO")
+                                val reusable = fallbackPayment
+                                    ?.takeIf { it[PaymentsTable.status] != "COMPLETED" }
+                                    ?.let { buildReusableMoMoResponse(it) }
+                                if (reusable != null) {
+                                    markOrderPaymentPending(orderId, "MOMO")
+                                    return@transaction PosGatewayPaymentResponse(
+                                        orderId = orderId,
+                                        orderCode = orderCode,
+                                        paymentMethod = "MOMO",
+                                        paymentUrl = reusable.paymentUrl,
+                                        qrContent = reusable.qrContent ?: reusable.paymentUrl,
+                                        paymentReference = reusable.requestId,
+                                        amount = amount,
+                                        status = "PENDING"
+                                    )
+                                }
+                            }
+                            throw e
+                        }
                         println("DEBUG: MoMo response received - qrUrl=${createdPayment.qrContent?.take(50)}")
 
                         upsertPendingPayment(
@@ -609,6 +658,23 @@ class PaymentService {
 
                 "ZALOPAY" -> {
                     try {
+                        val existingPayment = findLatestPayment(orderId, "ZALOPAY")
+                        if (existingPayment != null && existingPayment[PaymentsTable.status] != "COMPLETED") {
+                            val reusable = buildReusableZaloPayResponse(existingPayment)
+                            if (reusable != null) {
+                                markOrderPaymentPending(orderId, "ZALOPAY")
+                                return@transaction PosGatewayPaymentResponse(
+                                    orderId = orderId,
+                                    orderCode = orderCode,
+                                    paymentMethod = "ZALOPAY",
+                                    paymentUrl = reusable.paymentUrl,
+                                    qrContent = reusable.qrContent ?: reusable.paymentUrl,
+                                    paymentReference = reusable.transactionRef,
+                                    amount = amount,
+                                    status = "PENDING"
+                                )
+                            }
+                        }
                         val transId = buildZaloAppTransId()
                         val appTime = System.currentTimeMillis()
                         val appUser = orderCode
@@ -699,7 +765,10 @@ class PaymentService {
                             method = "ZALOPAY",
                             amount = BigDecimal(amount),
                             transactionId = transId,
-                            gatewayResponse = buildPendingZaloMetadata()
+                            gatewayResponse = buildPendingZaloMetadata(
+                                paymentUrl = paymentUrl,
+                                qrContent = paymentQrCode
+                            )
                         )
                         markOrderPaymentPending(orderId, "ZALOPAY")
 
@@ -1041,7 +1110,9 @@ class PaymentService {
             PaymentsTable.update({ PaymentsTable.id eq payment[PaymentsTable.id] }) {
                 it[PaymentsTable.paymentGatewayResponse] = buildPendingZaloMetadata(
                     lastQueryAtEpochMs = metadata.lastQueryAtEpochMs,
-                    redirectSeenAtEpochMs = System.currentTimeMillis()
+                    redirectSeenAtEpochMs = System.currentTimeMillis(),
+                    paymentUrl = metadata.paymentUrl,
+                    qrContent = metadata.qrContent
                 )
             }
         }
@@ -1383,6 +1454,13 @@ class PaymentService {
 
         val gatewayResponse = json.decodeFromString<MoMoCreateGatewayResponse>(response.body())
         validateMoMoCreateResponse(prepared, gatewayResponse)
+        if (gatewayResponse.resultCode != null && gatewayResponse.resultCode != 0) {
+            val responseMessage = gatewayResponse.message?.takeIf { it.isNotBlank() }
+                ?: "resultCode=${gatewayResponse.resultCode}"
+            throw IllegalStateException(
+                "MoMo create payment failed: resultCode=${gatewayResponse.resultCode}, message=$responseMessage"
+            )
+        }
 
         val payUrl = gatewayResponse.payUrl?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("MoMo did not return payUrl")
@@ -1578,6 +1656,25 @@ class PaymentService {
                 status = "PENDING",
                 qrContent = qrContent,
                 deeplink = gatewayResponse.deeplink?.takeIf { it.isNotBlank() }
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun buildReusableZaloPayResponse(payment: ResultRow): ZaloPayResponse? {
+        val rawGatewayResponse = payment[PaymentsTable.paymentGatewayResponse]?.takeIf { it.isNotBlank() }
+            ?: return null
+        return try {
+            val metadata = json.decodeFromString<ZaloPayPendingMetadata>(rawGatewayResponse)
+            val paymentUrl = metadata.paymentUrl?.takeIf { it.isNotBlank() } ?: return null
+            val transactionRef = payment[PaymentsTable.transactionId]?.takeIf { it.isNotBlank() } ?: return null
+            ZaloPayResponse(
+                paymentUrl = paymentUrl,
+                transactionRef = transactionRef,
+                amount = normalizePaymentAmount(payment[PaymentsTable.amount]),
+                status = "PENDING",
+                qrContent = metadata.qrContent?.takeIf { it.isNotBlank() } ?: paymentUrl
             )
         } catch (_: Exception) {
             null
@@ -2012,12 +2109,16 @@ class PaymentService {
 
     private fun buildPendingZaloMetadata(
         lastQueryAtEpochMs: Long? = null,
-        redirectSeenAtEpochMs: Long? = null
+        redirectSeenAtEpochMs: Long? = null,
+        paymentUrl: String? = null,
+        qrContent: String? = null
     ): String {
         return json.encodeToString(
             ZaloPayPendingMetadata(
                 lastQueryAtEpochMs = lastQueryAtEpochMs,
-                redirectSeenAtEpochMs = redirectSeenAtEpochMs
+                redirectSeenAtEpochMs = redirectSeenAtEpochMs,
+                paymentUrl = paymentUrl,
+                qrContent = qrContent
             )
         )
     }
@@ -2453,6 +2554,14 @@ class PaymentService {
         paymentPublicBaseUrl?.let { return "$it/api/v1/webhooks/zalopay/callback" }
         deriveBaseUrl(redirectUrl)?.let { return "$it/api/v1/webhooks/zalopay/callback" }
         return "http://localhost:8080/api/v1/webhooks/zalopay/callback"
+    }
+
+    private fun isDuplicateMoMoOrder(error: Throwable): Boolean {
+        val message = rootCauseMessage(error)
+        return message.contains("trùng orderId", ignoreCase = true) ||
+            message.contains("trung orderId", ignoreCase = true) ||
+            message.contains("duplicate", ignoreCase = true) ||
+            message.contains("resultCode=41", ignoreCase = true)
     }
 
     private fun rootCauseMessage(error: Throwable): String {

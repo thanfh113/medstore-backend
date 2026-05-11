@@ -3,6 +3,7 @@ package com.example.nhathuoc.routes
 import com.example.nhathuoc.database.tables.EmployeeProfilesTable
 import com.example.nhathuoc.database.tables.BannersTable
 import com.example.nhathuoc.database.tables.OrdersTable
+import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.RefreshTokensTable
 import com.example.nhathuoc.database.tables.RewardAccountsTable
 import com.example.nhathuoc.database.tables.UsersTable
@@ -54,6 +55,19 @@ private data class FinanceSummaryDto(
 private data class AdminEnvelope<T>(
     val data: T,
     val message: String
+)
+
+@kotlinx.serialization.Serializable
+private data class AdminDashboardDto(
+    val totalOrders: Int,
+    val totalCustomers: Int,
+    val totalProducts: Int,
+    val pendingOrders: Int,
+    val totalRevenue: Double,
+    val todayOrders: Int,
+    val todayRevenue: Double,
+    val monthOrders: Int,
+    val monthRevenue: Double
 )
 
 @kotlinx.serialization.Serializable
@@ -313,6 +327,27 @@ private fun ResultRow.toBannerDto(): BannerDto {
     )
 }
 
+@kotlinx.serialization.Serializable
+private data class RewardConfigDto(
+    val pointsPerThousandVnd: Int = 1,
+    val minPointsToRedeem: Int = 100,
+    val pointsExpiryDays: Int? = null,
+    val isEnabled: Boolean = true
+)
+
+private val rewardConfigFile = java.io.File(".reward-config.json")
+private val rewardConfigJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+private fun loadRewardConfig(): RewardConfigDto = runCatching {
+    if (rewardConfigFile.exists())
+        rewardConfigJson.decodeFromString<RewardConfigDto>(rewardConfigFile.readText())
+    else RewardConfigDto()
+}.getOrDefault(RewardConfigDto())
+
+private fun saveRewardConfig(config: RewardConfigDto) {
+    rewardConfigFile.writeText(rewardConfigJson.encodeToString(RewardConfigDto.serializer(), config))
+}
+
 private fun logAccountActionInTx(
     targetUserId: String,
     actorUserId: String,
@@ -342,7 +377,53 @@ fun Route.adminRoutes(
             // Dashboard
             get("/dashboard") {
                 call.requireRole(AppRoles.ADMIN)
-                call.respond(mapOf("message" to "TODO: thống kê tổng quan"))
+                val stats = transaction {
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                    val todayDate = now.date
+                    val thisYear = now.year
+                    val thisMonth = now.month
+
+                    val allOrders = OrdersTable.selectAll().toList()
+                    val successfulOrders = allOrders.filter {
+                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                    }
+                    val totalRevenue = successfulOrders.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
+                    val pendingOrders = allOrders.count { it[OrdersTable.status] in listOf("PENDING", "PROCESSING") }
+
+                    val todayOrders = allOrders.filter { row ->
+                        val dt = row[OrdersTable.createdAt]; dt.date == todayDate
+                    }
+                    val todayRevenue = todayOrders.filter {
+                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                    }.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
+
+                    val monthOrders = allOrders.filter { row ->
+                        val dt = row[OrdersTable.createdAt]; dt.year == thisYear && dt.month == thisMonth
+                    }
+                    val monthRevenue = monthOrders.filter {
+                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                    }.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
+
+                    val totalCustomers = UsersTable.selectAll()
+                        .where { (UsersTable.role eq AppRoles.USER) and UsersTable.deletedAt.isNull() }
+                        .count().toInt()
+                    val totalProducts = ProductsTable.selectAll()
+                        .where { ProductsTable.isActive eq true }
+                        .count().toInt()
+
+                    AdminDashboardDto(
+                        totalOrders = allOrders.size,
+                        totalCustomers = totalCustomers,
+                        totalProducts = totalProducts,
+                        pendingOrders = pendingOrders,
+                        totalRevenue = totalRevenue,
+                        todayOrders = todayOrders.size,
+                        todayRevenue = todayRevenue,
+                        monthOrders = monthOrders.size,
+                        monthRevenue = monthRevenue
+                    )
+                }
+                call.respond(AdminEnvelope(stats, "Dashboard stats retrieved successfully"))
             }
             // Finance
             get("/finance") {
@@ -386,10 +467,6 @@ fun Route.adminRoutes(
                         message = "Get finance summary successfully"
                     )
                 )
-            }
-            get("/finance/export") {
-                call.requireRole(AppRoles.ADMIN)
-                call.respond(mapOf("message" to "TODO: xuất báo cáo"))
             }
             // Users - Shop management removed
             get("/users") {
@@ -773,11 +850,17 @@ fun Route.adminRoutes(
             // Rewards config
             get("/rewards/config") {
                 call.requireRole(AppRoles.ADMIN)
-                call.respond(mapOf("message" to "TODO: cấu hình điểm thưởng"))
+                call.respond(AdminEnvelope(loadRewardConfig(), "Reward config retrieved successfully"))
             }
             put("/rewards/config") {
                 call.requireRole(AppRoles.ADMIN)
-                call.respond(mapOf("message" to "TODO: cập nhật cấu hình"))
+                val config = call.receive<RewardConfigDto>()
+                if (config.pointsPerThousandVnd < 0)
+                    return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "pointsPerThousandVnd phải >= 0"))
+                if (config.minPointsToRedeem < 0)
+                    return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "minPointsToRedeem phải >= 0"))
+                saveRewardConfig(config)
+                call.respond(AdminEnvelope(config, "Reward config updated successfully"))
             }
         }
     }
