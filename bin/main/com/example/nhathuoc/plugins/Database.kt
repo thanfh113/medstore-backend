@@ -61,6 +61,7 @@ fun Application.configureDatabase() {
             RewardRedemptionsTable,
 
             // Chat & AI tables
+            AiConversationsTable,
             ChatSessionsTable,
             ChatMessagesTable,
             ReviewsTable,

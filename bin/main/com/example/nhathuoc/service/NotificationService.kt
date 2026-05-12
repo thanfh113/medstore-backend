@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.insert
 import java.util.UUID
 
 class NotificationService {
+
     fun createUserNotification(
         userId: String,
         title: String,
@@ -26,6 +27,16 @@ class NotificationService {
             it[isRead] = false
             it[createdAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         }
+
+        // Fire-and-forget FCM push (no-ops gracefully if FCM not configured)
+        FcmService.sendToUser(
+            userId = userId,
+            title = title,
+            body  = body ?: "",
+            type  = type,
+            refId = refId
+        )
+
         return notificationId
     }
 }

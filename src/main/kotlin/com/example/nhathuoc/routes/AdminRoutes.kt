@@ -2,6 +2,7 @@ package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.EmployeeProfilesTable
 import com.example.nhathuoc.database.tables.BannersTable
+import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.RefreshTokensTable
@@ -36,6 +37,7 @@ import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.SortOrder
+import java.math.BigDecimal
 import java.util.UUID
 
 @kotlinx.serialization.Serializable
@@ -446,7 +448,25 @@ fun Route.adminRoutes(
                         .sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
                     val totalDiscount = successfulOrders.sumOf { it[OrdersTable.discount].toDouble() }
 
-                    val totalExpenses = 0.0
+                    val successfulOrderIds = successfulOrders.map { it[OrdersTable.id] }.toSet()
+                    val importPrices = ProductsTable
+                        .selectAll()
+                        .associate { it[ProductsTable.id] to (it[ProductsTable.importPrice] ?: BigDecimal.ZERO) }
+
+                    val soldGoodsCost = if (successfulOrderIds.isEmpty()) {
+                        BigDecimal.ZERO
+                    } else {
+                        OrderItemsTable
+                            .selectAll()
+                            .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
+                            .fold(BigDecimal.ZERO) { total, item ->
+                                val productId = item[OrderItemsTable.productId]
+                                val importPrice = productId?.let { importPrices[it] } ?: BigDecimal.ZERO
+                                total.add(importPrice.multiply(item[OrderItemsTable.quantity].toBigDecimal()))
+                            }
+                    }
+
+                    val totalExpenses = soldGoodsCost.toDouble()
 
                     FinanceSummaryDto(
                         shopId = null,

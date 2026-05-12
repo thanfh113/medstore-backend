@@ -41,6 +41,8 @@ import java.util.TimeZone as JavaTimeZone
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+private const val SUCCESSFUL_PAYMENT_REWARD_POINTS = 100
+
 data class VNPayResponse(
     val paymentUrl: String,
     val transactionRef: String,
@@ -1794,7 +1796,7 @@ class PaymentService {
             return
         }
 
-        val pointsEarned = order[OrdersTable.pointsEarned]
+        val pointsEarned = SUCCESSFUL_PAYMENT_REWARD_POINTS
         if (pointsEarned <= 0) {
             return
         }
@@ -1828,6 +1830,16 @@ class PaymentService {
             it[RewardTransactionsTable.type] = "EARN"
             it[RewardTransactionsTable.points] = pointsEarned
             it[RewardTransactionsTable.description] = "Thanh toán thành công đơn hàng ${order[OrdersTable.orderCode]}"
+        }
+
+        if (order[OrdersTable.orderChannel] == "POS") {
+            NotificationService().createUserNotification(
+                userId = orderUserId,
+                title = "Thanh toán tại quầy thành công",
+                body = "Đơn ${order[OrdersTable.orderCode]} đã hoàn tất. Bạn được cộng $pointsEarned điểm thưởng.",
+                type = "REWARD",
+                refId = orderId
+            )
         }
     }
 

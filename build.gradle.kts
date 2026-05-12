@@ -74,6 +74,9 @@ dependencies {
     // UUID
     implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
 
+    // Firebase Admin SDK (send FCM push notifications)
+    implementation("com.google.firebase:firebase-admin:9.4.1")
+
     // Cloudinary (upload ảnh/video)
     implementation("com.cloudinary:cloudinary-http5:2.0.0")
 

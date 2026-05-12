@@ -22,6 +22,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+private const val SUCCESSFUL_ORDER_REWARD_POINTS = 100
+
 // ─────────────────────────────────────────────────────────────
 // DTOs
 // ─────────────────────────────────────────────────────────────
@@ -430,9 +432,7 @@ class CheckoutService {
                     ?.get(ProductsTable.id)
             } ?: throw IllegalArgumentException("Không thể xác định cửa hàng")
 
-            val pointsEarned = cartItems.sumOf { row ->
-                row[ProductsTable.rewardPoints] * row[CartItemsTable.quantity]
-            }
+            val pointsEarned = SUCCESSFUL_ORDER_REWARD_POINTS
 
             OrdersTable.insert {
                 it[OrdersTable.id] = orderId
@@ -632,7 +632,7 @@ class CheckoutService {
 
         val orderId = UUID.randomUUID().toString()
         val orderCode = "ORD-${System.currentTimeMillis().toString().takeLast(9)}"
-        val pointsEarned = checkoutLines.sumOf { line -> line.rewardPoints * line.quantity }
+        val pointsEarned = SUCCESSFUL_ORDER_REWARD_POINTS
 
         OrdersTable.insert {
             it[OrdersTable.id] = orderId

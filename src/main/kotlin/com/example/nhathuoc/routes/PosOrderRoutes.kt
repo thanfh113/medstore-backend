@@ -6,7 +6,9 @@ import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.PaymentsTable
 import com.example.nhathuoc.database.tables.ProductsTable
+import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.service.PaymentService
+import com.example.nhathuoc.service.RewardAwardService
 import com.example.nhathuoc.util.getUserId
 import com.example.nhathuoc.util.requireInternalAccess
 import io.ktor.http.HttpStatusCode
@@ -24,6 +26,7 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.insert
@@ -121,6 +124,7 @@ private val supportedPosGatewayMethods = setOf("MOMO", "VNPAY", "ZALOPAY")
 
 fun Route.posOrderRoutes() {
     val paymentService = PaymentService()
+    val rewardAwardService = RewardAwardService()
     authenticate("auth-jwt") {
         route("/internal/pos/orders") {
             post {
@@ -165,9 +169,22 @@ fun Route.posOrderRoutes() {
                         Triple(productRow, reqItem.quantity, reqItem.unit?.trim()?.ifBlank { null } ?: productRow[ProductsTable.unit])
                     }
 
+                    val customerLookup = request.customerId?.trim()?.ifBlank { null }
+                    val resolvedCustomerId = customerLookup?.let { lookup ->
+                        UsersTable
+                            .selectAll()
+                            .where {
+                                ((UsersTable.id eq lookup) or (UsersTable.phone eq lookup)) and
+                                    UsersTable.deletedAt.isNull()
+                            }
+                            .limit(1)
+                            .firstOrNull()
+                            ?.get(UsersTable.id)
+                    }
+
                     val couponComputed = request.couponCode
                         ?.takeIf { it.isNotBlank() }
-                        ?.let { code -> computeCouponDiscount(code, subtotal, request.customerId) }
+                        ?.let { code -> computeCouponDiscount(code, subtotal, resolvedCustomerId) }
 
                     if (couponComputed != null && couponComputed.isFailure) {
                         return@transaction Result.failure(couponComputed.exceptionOrNull()!!)
@@ -183,7 +200,7 @@ fun Route.posOrderRoutes() {
                     OrdersTable.insert {
                         it[id] = orderId
                         it[OrdersTable.orderCode] = orderCode
-                        it[OrdersTable.userId] = request.customerId?.trim()?.ifBlank { null }
+                        it[OrdersTable.userId] = resolvedCustomerId
                         it[OrdersTable.orderChannel] = "POS"
                         it[OrdersTable.status] = "PENDING"
                         it[OrdersTable.pickupType] = "PICKUP"
@@ -215,7 +232,7 @@ fun Route.posOrderRoutes() {
                             it[CouponRedemptionsTable.id] = UUID.randomUUID().toString()
                             it[CouponRedemptionsTable.couponId] = couponData.couponId
                             it[CouponRedemptionsTable.orderId] = orderId
-                            it[CouponRedemptionsTable.userId] = request.customerId?.trim()?.ifBlank { null }
+                            it[CouponRedemptionsTable.userId] = resolvedCustomerId
                             it[CouponRedemptionsTable.appliedDiscountAmount] = discount
                             it[CouponRedemptionsTable.status] = "APPLIED"
                         }
@@ -474,6 +491,8 @@ fun Route.posOrderRoutes() {
                             it[PaymentsTable.paymentGatewayResponse] = null
                         }
                     }
+
+                    rewardAwardService.awardSuccessfulPaymentPointsIfNeeded(order)
 
                     Result.success(
                         PosOrderConfirmData(
