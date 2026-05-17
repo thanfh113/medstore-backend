@@ -34,7 +34,8 @@ class NotificationService {
             title = title,
             body  = body ?: "",
             type  = type,
-            refId = refId
+            refId = refId,
+            notificationId = notificationId
         )
 
         return notificationId

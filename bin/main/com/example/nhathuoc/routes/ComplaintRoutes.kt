@@ -1,5 +1,6 @@
 package com.example.nhathuoc.routes
 
+import com.example.nhathuoc.service.AddComplaintAttachmentsRequest
 import com.example.nhathuoc.service.ComplaintMessageRequest
 import com.example.nhathuoc.service.ComplaintService
 import com.example.nhathuoc.service.CreateComplaintRequest
@@ -95,6 +96,41 @@ fun Route.complaintRoutes() {
                             data = message,
                             message = "Complaint message created successfully"
                         )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            post("/{id}/attachments") {
+                val userId = call.principal<JWTPrincipal>()?.getUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val complaintId = call.parameters["id"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Complaint ID is required"))
+                val request = call.receive<AddComplaintAttachmentsRequest>()
+
+                try {
+                    val complaint = complaintService.addAttachments(complaintId, userId, request.attachments)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(data = complaint, message = "Attachments added successfully")
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
+            post("/{id}/request-refund") {
+                val userId = call.principal<JWTPrincipal>()?.getUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val complaintId = call.parameters["id"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Complaint ID is required"))
+
+                try {
+                    val complaint = complaintService.requestRefund(complaintId, userId)
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RouteDataMessageResponse(data = complaint, message = "Refund requested successfully")
                     )
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))

@@ -9,7 +9,10 @@ import com.example.nhathuoc.database.tables.ReviewReportsTable
 import com.example.nhathuoc.database.tables.ReviewsTable
 import com.example.nhathuoc.database.tables.UsersTable
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -182,6 +185,15 @@ class ReviewService {
 
         val verifiedOrderItem = resolvePurchasedOrderItem(productId, userId, request.orderId, request.orderItemId)
             ?: throw IllegalArgumentException("Only paid or delivered purchased products can be reviewed")
+
+        val completedAt = verifiedOrderItem[OrdersTable.completedAt]
+        if (completedAt != null) {
+            val cutoff = Clock.System.now().minus(30, DateTimeUnit.DAY, TimeZone.UTC)
+            val completedInstant = completedAt.toInstant(TimeZone.UTC)
+            require(completedInstant >= cutoff) {
+                "Đã quá 30 ngày kể từ khi nhận hàng, không thể đánh giá đơn này."
+            }
+        }
 
         val orderId = verifiedOrderItem[OrderItemsTable.orderId]
         val orderItemId = verifiedOrderItem[OrderItemsTable.id]

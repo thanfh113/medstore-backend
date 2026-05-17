@@ -107,7 +107,8 @@ private fun couponDtoFromRow(row: ResultRow): CouponDto {
 internal data class CouponComputation(
     val couponId: String,
     val code: String,
-    val discountAmount: BigDecimal
+    val discountAmount: BigDecimal,
+    val isFreeship: Boolean = false
 )
 
 internal fun computeCouponDiscount(
@@ -153,10 +154,10 @@ fun Route.couponRoutes() {
                 if (request.name.isBlank()) {
                     return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Coupon name is required"))
                 }
-                if (discountType !in setOf("PERCENT", "FIXED_AMOUNT")) {
-                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountType must be PERCENT or FIXED_AMOUNT"))
+                if (discountType !in setOf("PERCENT", "FIXED_AMOUNT", "FREESHIP")) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountType must be PERCENT, FIXED_AMOUNT or FREESHIP"))
                 }
-                if (request.discountValue <= 0.0) {
+                if (discountType != "FREESHIP" && request.discountValue <= 0.0) {
                     return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountValue must be > 0"))
                 }
 
@@ -214,10 +215,10 @@ fun Route.couponRoutes() {
                 if (request.name.isBlank()) {
                     return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Coupon name is required"))
                 }
-                if (discountType !in setOf("PERCENT", "FIXED_AMOUNT")) {
-                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountType must be PERCENT or FIXED_AMOUNT"))
+                if (discountType !in setOf("PERCENT", "FIXED_AMOUNT", "FREESHIP")) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountType must be PERCENT, FIXED_AMOUNT or FREESHIP"))
                 }
-                if (request.discountValue <= 0.0) {
+                if (discountType != "FREESHIP" && request.discountValue <= 0.0) {
                     return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "discountValue must be > 0"))
                 }
 
@@ -347,11 +348,13 @@ internal fun computeCouponDiscountFromRow(
         }
     }
 
-    val discount = when (coupon[CouponsTable.discountType]) {
+    val discountType = coupon[CouponsTable.discountType]
+    val discount = when (discountType) {
         "PERCENT" -> {
             val pct = coupon[CouponsTable.discountValue]
             orderTotal.multiply(pct).divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
         }
+        "FREESHIP" -> BigDecimal.ZERO
         else -> coupon[CouponsTable.discountValue]
     }
 
@@ -369,7 +372,8 @@ internal fun computeCouponDiscountFromRow(
         CouponComputation(
             couponId = coupon[CouponsTable.id],
             code = coupon[CouponsTable.code],
-            discountAmount = normalizedDiscount
+            discountAmount = normalizedDiscount,
+            isFreeship = discountType == "FREESHIP"
         )
     )
 }

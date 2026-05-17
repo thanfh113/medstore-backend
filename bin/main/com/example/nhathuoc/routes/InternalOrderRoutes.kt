@@ -405,17 +405,23 @@ fun Route.internalOrderRoutes() {
                     }
 
                     val oldStatus = order[OrdersTable.status]
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
                     OrdersTable.update({ OrdersTable.id eq orderId }) {
                         it[status] = newStatus
                         if (newStatus == "CANCELLED" && order[OrdersTable.paymentStatus] != "COMPLETED") {
                             it[paymentStatus] = "UNPAID"
                         }
+                        if (newStatus == "DELIVERED" && order[OrdersTable.completedAt] == null) {
+                            it[completedAt] = now
+                        }
                     }
 
-                    if (newStatus == "CANCELLED") {
+                    if (newStatus == "CANCELLED" || newStatus == "RETURNED") {
                         orderLifecycleService.restoreStockOnCancel(order)
-                        orderLifecycleService.cancelPendingPayments(orderId)
                         orderLifecycleService.revertCouponAndRewardUsage(orderId)
+                    }
+                    if (newStatus == "CANCELLED") {
+                        orderLifecycleService.cancelPendingPayments(orderId)
                     }
 
                     if (newStatus != oldStatus) {

@@ -44,6 +44,11 @@ data class ComplaintMessageRequest(
 )
 
 @Serializable
+data class AddComplaintAttachmentsRequest(
+    val attachments: List<ComplaintAttachmentInput>
+)
+
+@Serializable
 data class UpdateComplaintRequest(
     val status: String? = null,
     val priority: String? = null,
@@ -495,6 +500,90 @@ class ComplaintService {
             )
         }
         message
+    }
+
+    fun addAttachments(complaintId: String, userId: String, attachments: List<ComplaintAttachmentInput>): ComplaintDto = transaction {
+        require(attachments.isNotEmpty()) { "At least one attachment is required" }
+        val complaint = OrderComplaintsTable.selectAll()
+            .where { (OrderComplaintsTable.id eq complaintId) and (OrderComplaintsTable.userId eq userId) }
+            .singleOrNull()
+            ?: throw IllegalArgumentException("Complaint not found")
+        require(complaint[OrderComplaintsTable.status] !in closedComplaintStatuses) {
+            "Cannot add attachments to a closed complaint"
+        }
+
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+        val newAttachments = attachments
+            .filter { it.fileUrl.isNotBlank() }
+            .map { attachment ->
+                ComplaintAttachmentDto(
+                    id = UUID.randomUUID().toString(),
+                    fileUrl = attachment.fileUrl.trim(),
+                    fileType = attachment.fileType.ifBlank { "IMAGE" },
+                    publicId = attachment.publicId?.ifBlank { null },
+                    createdAt = now.toString()
+                )
+            }
+        require(newAttachments.isNotEmpty()) { "No valid attachments provided" }
+
+        val existing = decodeList<ComplaintAttachmentDto>(complaint[OrderComplaintsTable.attachmentsJson])
+        OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
+            it[attachmentsJson] = encodeList(existing + newAttachments)
+            it[updatedAt] = now
+        }
+
+        insertComplaintEvent(
+            complaintId = complaintId,
+            actorUserId = userId,
+            actorRole = "USER",
+            eventType = "ATTACHMENT_ADDED",
+            title = "Thêm bằng chứng",
+            description = "Khách hàng bổ sung ${newAttachments.size} tệp đính kèm",
+            fromStatus = complaint[OrderComplaintsTable.status],
+            toStatus = complaint[OrderComplaintsTable.status],
+            fromPriority = complaint[OrderComplaintsTable.priority],
+            toPriority = complaint[OrderComplaintsTable.priority],
+            dueAt = calculateDueAt(complaint[OrderComplaintsTable.status], complaint[OrderComplaintsTable.priority], now),
+            createdAt = now
+        )
+
+        getComplaintForUser(complaintId, userId) ?: throw IllegalStateException("Cannot load updated complaint")
+    }
+
+    fun requestRefund(complaintId: String, userId: String): ComplaintDto = transaction {
+        val complaint = OrderComplaintsTable.selectAll()
+            .where { (OrderComplaintsTable.id eq complaintId) and (OrderComplaintsTable.userId eq userId) }
+            .singleOrNull()
+            ?: throw IllegalArgumentException("Complaint not found")
+        require(complaint[OrderComplaintsTable.status] !in closedComplaintStatuses) {
+            "Cannot request refund for a closed complaint"
+        }
+        require(complaint[OrderComplaintsTable.refundStatus] == "NONE") {
+            "Refund has already been requested or processed"
+        }
+
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+        OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
+            it[refundStatus] = "REQUESTED"
+            it[updatedAt] = now
+        }
+
+        insertComplaintEvent(
+            complaintId = complaintId,
+            actorUserId = userId,
+            actorRole = "USER",
+            eventType = "REFUND_UPDATED",
+            title = "Khách hàng yêu cầu hoàn tiền",
+            description = "Khách hàng đã gửi yêu cầu hoàn tiền",
+            fromStatus = complaint[OrderComplaintsTable.status],
+            toStatus = complaint[OrderComplaintsTable.status],
+            fromPriority = complaint[OrderComplaintsTable.priority],
+            toPriority = complaint[OrderComplaintsTable.priority],
+            dueAt = calculateDueAt(complaint[OrderComplaintsTable.status], complaint[OrderComplaintsTable.priority], now),
+            createdAt = now
+        )
+
+        getComplaintForUser(complaintId, userId) ?: throw IllegalStateException("Cannot load updated complaint")
     }
 
     private fun resolveComplaintProductId(orderId: String, orderItemId: String?, requestedProductId: String?): String? {

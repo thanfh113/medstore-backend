@@ -21,7 +21,8 @@ object LocalUploadStorage {
 
     fun shouldStoreLocal(type: UploadType, extension: String): Boolean {
         val normalized = extension.trim().trimStart('.').lowercase()
-        return type == UploadType.BANNER || normalized == "pdf"
+        return type == UploadType.BANNER || type == UploadType.EVIDENCE ||
+            type == UploadType.REVIEW_IMAGE || normalized == "pdf"
     }
 
     fun save(bytes: ByteArray, type: UploadType, extension: String): SavedFile {

@@ -111,9 +111,9 @@ class OrderLifecycleService(
         val body = when (normalizedStatus) {
             "PENDING" -> "Đơn hàng đã được ghi nhận và đang chờ xác nhận."
             "PROCESSING" -> if (effectivePaymentStatus == "COMPLETED") {
-                "Thanh toán đã hoàn tất. Nhà thuốc đang chuẩn bị đơn hàng."
+                "Thanh toán đã hoàn tất. Medstore đang chuẩn bị đơn hàng."
             } else {
-                "Nhà thuốc đang kiểm tra và chuẩn bị đơn hàng."
+                "Medstore đang kiểm tra và chuẩn bị đơn hàng."
             }
             "SHIPPING" -> "Đơn hàng đã bàn giao cho bộ phận giao vận."
             "DELIVERED" -> "Bạn đã nhận hàng. Đánh giá sản phẩm 5 sao để nhận thêm 200 điểm thưởng."

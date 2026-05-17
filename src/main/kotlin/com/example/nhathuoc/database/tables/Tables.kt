@@ -22,8 +22,9 @@ object UsersTable : Table("users") {
     val gender      = varchar("gender", 10).nullable()     // Nam/Nữ/Khác
     val dateOfBirth = varchar("date_of_birth", 20).nullable()
     val role        = varchar("role", 20).default("USER") // ADMIN | EMPLOYEE | USER
-    val isActive    = bool("is_active").default(true)
-    val lastLoginAt = datetime("last_login_at").nullable()
+    val isActive             = bool("is_active").default(true)
+    val failedLoginAttempts  = integer("failed_login_attempts").default(0)
+    val lastLoginAt          = datetime("last_login_at").nullable()
     val fcmToken    = text("fcm_token").nullable()
     val fcmPlatform = varchar("fcm_platform", 20).nullable()
     val fcmUpdatedAt = datetime("fcm_updated_at").nullable()

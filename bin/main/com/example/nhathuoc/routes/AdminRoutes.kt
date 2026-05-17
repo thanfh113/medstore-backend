@@ -23,8 +23,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
@@ -41,6 +43,14 @@ import java.math.BigDecimal
 import java.util.UUID
 
 @kotlinx.serialization.Serializable
+private data class TopSellingProductDto(
+    val productId: String,
+    val productName: String,
+    val quantitySold: Int,
+    val revenue: Double
+)
+
+@kotlinx.serialization.Serializable
 private data class FinanceSummaryDto(
     val shopId: String? = null,
     val grossRevenue: Double,
@@ -50,7 +60,11 @@ private data class FinanceSummaryDto(
     val totalExpenses: Double,
     val netProfit: Double,
     val successfulOrderCount: Int,
-    val expenseCount: Int
+    val expenseCount: Int,
+    val averageOrderValue: Double = 0.0,
+    val cancelledOrderCount: Int = 0,
+    val totalOrderCount: Int = 0,
+    val topSellingProducts: List<TopSellingProductDto> = emptyList()
 )
 
 @kotlinx.serialization.Serializable
@@ -112,6 +126,7 @@ private data class AdminUserDto(
     val email: String? = null,
     val role: String,
     val isActive: Boolean,
+    val failedLoginAttempts: Int = 0,
     val createdAt: String,
     val employeeProfile: AdminEmployeeProfileDto? = null
 )
@@ -196,6 +211,7 @@ private fun ResultRow.toAdminUserDto(): AdminUserDto {
         phone = this[UsersTable.phone],
         email = this[UsersTable.email],
         role = role,
+        failedLoginAttempts = this[UsersTable.failedLoginAttempts],
         isActive = this[UsersTable.isActive],
         createdAt = this[UsersTable.createdAt].toString(),
         employeeProfile = if (role == AppRoles.EMPLOYEE) toEmployeeProfileDto() else null
@@ -387,7 +403,9 @@ fun Route.adminRoutes(
 
                     val allOrders = OrdersTable.selectAll().toList()
                     val successfulOrders = allOrders.filter {
-                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                        val s = it[OrdersTable.status]
+                        s != "RETURNED" && s != "CANCELLED" &&
+                            (s == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED")
                     }
                     val totalRevenue = successfulOrders.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
                     val pendingOrders = allOrders.count { it[OrdersTable.status] in listOf("PENDING", "PROCESSING") }
@@ -396,14 +414,18 @@ fun Route.adminRoutes(
                         val dt = row[OrdersTable.createdAt]; dt.date == todayDate
                     }
                     val todayRevenue = todayOrders.filter {
-                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                        val s = it[OrdersTable.status]
+                        s != "RETURNED" && s != "CANCELLED" &&
+                            (s == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED")
                     }.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
 
                     val monthOrders = allOrders.filter { row ->
                         val dt = row[OrdersTable.createdAt]; dt.year == thisYear && dt.month == thisMonth
                     }
                     val monthRevenue = monthOrders.filter {
-                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                        val s = it[OrdersTable.status]
+                        s != "RETURNED" && s != "CANCELLED" &&
+                            (s == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED")
                     }.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
 
                     val totalCustomers = UsersTable.selectAll()
@@ -431,12 +453,33 @@ fun Route.adminRoutes(
             get("/finance") {
                 call.requireRole(AppRoles.ADMIN)
 
+                val period = call.request.queryParameters["period"] ?: "ALL"
+
                 val summary = transaction {
-                    val orderRows = OrdersTable.selectAll()
-                        .toList()
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Ho_Chi_Minh"))
+                    val periodStart: LocalDateTime? = when (period) {
+                        "TODAY" -> LocalDateTime(now.year, now.monthNumber, now.dayOfMonth, 0, 0, 0)
+                        "WEEK" -> {
+                            val daysBack = now.dayOfWeek.ordinal // Mon=0, Sun=6
+                            val startDate = now.date.minus(daysBack, DateTimeUnit.DAY)
+                            LocalDateTime(startDate.year, startDate.monthNumber, startDate.dayOfMonth, 0, 0, 0)
+                        }
+                        "MONTH" -> LocalDateTime(now.year, now.monthNumber, 1, 0, 0, 0)
+                        "YEAR" -> LocalDateTime(now.year, 1, 1, 0, 0, 0)
+                        else -> null
+                    }
+
+                    val allOrders = OrdersTable.selectAll().toList()
+                    val orderRows = if (periodStart != null) {
+                        allOrders.filter { it[OrdersTable.createdAt] >= periodStart }
+                    } else {
+                        allOrders
+                    }
 
                     val successfulOrders = orderRows.filter {
-                        it[OrdersTable.status] == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED"
+                        val s = it[OrdersTable.status]
+                        s != "RETURNED" && s != "CANCELLED" &&
+                            (s == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED")
                     }
 
                     val grossRevenue = successfulOrders.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
@@ -453,20 +496,34 @@ fun Route.adminRoutes(
                         .selectAll()
                         .associate { it[ProductsTable.id] to (it[ProductsTable.importPrice] ?: BigDecimal.ZERO) }
 
-                    val soldGoodsCost = if (successfulOrderIds.isEmpty()) {
-                        BigDecimal.ZERO
-                    } else {
-                        OrderItemsTable
-                            .selectAll()
-                            .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
-                            .fold(BigDecimal.ZERO) { total, item ->
-                                val productId = item[OrderItemsTable.productId]
-                                val importPrice = productId?.let { importPrices[it] } ?: BigDecimal.ZERO
-                                total.add(importPrice.multiply(item[OrderItemsTable.quantity].toBigDecimal()))
-                            }
-                    }
+                    val allOrderItems = OrderItemsTable.selectAll().toList()
+
+                    val soldGoodsCost = allOrderItems
+                        .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
+                        .fold(BigDecimal.ZERO) { total, item ->
+                            val productId = item[OrderItemsTable.productId]
+                            val importPrice = productId?.let { importPrices[it] } ?: BigDecimal.ZERO
+                            total.add(importPrice.multiply(item[OrderItemsTable.quantity].toBigDecimal()))
+                        }
 
                     val totalExpenses = soldGoodsCost.toDouble()
+
+                    val topSellingProducts = allOrderItems
+                        .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
+                        .groupBy { it[OrderItemsTable.productId] ?: "" }
+                        .filter { it.key.isNotEmpty() }
+                        .map { (productId, items) ->
+                            TopSellingProductDto(
+                                productId = productId,
+                                productName = items.first()[OrderItemsTable.name],
+                                quantitySold = items.sumOf { it[OrderItemsTable.quantity] },
+                                revenue = items.sumOf { it[OrderItemsTable.price].toDouble() * it[OrderItemsTable.quantity] }
+                            )
+                        }
+                        .sortedByDescending { it.quantitySold }
+                        .take(10)
+
+                    val cancelledOrderCount = orderRows.count { it[OrdersTable.status] == "CANCELLED" }
 
                     FinanceSummaryDto(
                         shopId = null,
@@ -477,7 +534,11 @@ fun Route.adminRoutes(
                         totalExpenses = totalExpenses,
                         netProfit = grossRevenue - totalExpenses,
                         successfulOrderCount = successfulOrders.size,
-                        expenseCount = 0
+                        expenseCount = 0,
+                        averageOrderValue = if (successfulOrders.isEmpty()) 0.0 else grossRevenue / successfulOrders.size,
+                        cancelledOrderCount = cancelledOrderCount,
+                        totalOrderCount = orderRows.size,
+                        topSellingProducts = topSellingProducts
                     )
                 }
 
@@ -651,6 +712,7 @@ fun Route.adminRoutes(
                     UsersTable.update({ UsersTable.id eq userId }) {
                         it[UsersTable.isActive] = !active
                         it[UsersTable.updatedAt] = now
+                        if (!active) it[UsersTable.failedLoginAttempts] = 0
                     }
                     logAccountActionInTx(
                         targetUserId = userId,

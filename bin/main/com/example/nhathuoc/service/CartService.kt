@@ -72,7 +72,7 @@ class CartService {
             val riskClassification = product[ProductsTable.riskClassification].uppercase()
             if (riskClassification == "C" || riskClassification == "D") {
                 throw IllegalArgumentException(
-                    "Sản phẩm loại $riskClassification cần tư vấn/ký kết trực tiếp tại nhà thuốc, không hỗ trợ đặt online"
+                    "Sản phẩm loại $riskClassification cần tư vấn/ký kết trực tiếp tại Medstore, không hỗ trợ đặt online"
                 )
             }
 

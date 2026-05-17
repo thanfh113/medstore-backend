@@ -8,8 +8,10 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+import com.example.nhathuoc.plugins.BadRequestException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
@@ -167,7 +169,7 @@ class CheckoutService {
                 errors.add("Sản phẩm '${line.productName}' không còn có sẵn")
             }
             if (line.riskClassification == "C" || line.riskClassification == "D") {
-                errors.add("Sản phẩm '${line.productName}' cần tư vấn/ký kết trực tiếp tại nhà thuốc")
+                errors.add("Sản phẩm '${line.productName}' cần tư vấn/ký kết trực tiếp tại Medstore")
             }
             if (line.quantity > line.stock) {
                 errors.add("Kho không đủ cho '${line.productName}'. Có sẵn: ${line.stock}, Yêu cầu: ${line.quantity}")
@@ -260,6 +262,7 @@ class CheckoutService {
             val pointsValue = BigDecimal(appliedRewardPoints)
 
             val shipping = calculateShippingFee(subtotal, address, pickupType)
+            val effectiveShippingFee = if (promotion?.isFreeship == true) BigDecimal.ZERO else shipping.fee
 
             // Calculate tax (10%)
             val taxableAmount = subtotal - discount - pointsValue
@@ -270,12 +273,12 @@ class CheckoutService {
             }
 
             // Final total
-            val total = subtotal - discount - pointsValue + shipping.fee + tax
+            val total = subtotal - discount - pointsValue + effectiveShippingFee + tax
 
             CheckoutTotals(
                 subtotal = subtotal,
                 discount = discount,
-                shippingFee = shipping.fee,
+                shippingFee = effectiveShippingFee,
                 appliedRewardPoints = appliedRewardPoints,
                 pointsUsedValue = pointsValue,
                 tax = tax,
@@ -481,12 +484,15 @@ class CheckoutService {
                     it[OrderItemsTable.unit] = cartRow[CartItemsTable.unit]
                 }
 
-                // Stock allocation is handled by OrderFulfillmentService during fulfillment
-                // For now, just deduct stock
-                ProductsTable.update({ ProductsTable.id eq productId }) {
+                val rowsUpdated = ProductsTable.update({
+                    (ProductsTable.id eq productId) and (ProductsTable.stock greaterEq quantity)
+                }) {
                     with(SqlExpressionBuilder) {
                         it[ProductsTable.stock] = ProductsTable.stock - quantity
                     }
+                }
+                if (rowsUpdated == 0) {
+                    throw BadRequestException("Sản phẩm '$productName' vừa hết hàng. Vui lòng cập nhật giỏ hàng và thử lại.")
                 }
             }
 
@@ -674,10 +680,15 @@ class CheckoutService {
                 it[OrderItemsTable.unit] = line.unit
             }
 
-            ProductsTable.update({ ProductsTable.id eq line.productId }) {
+            val rowsUpdated = ProductsTable.update({
+                (ProductsTable.id eq line.productId) and (ProductsTable.stock greaterEq line.quantity)
+            }) {
                 with(SqlExpressionBuilder) {
                     it[ProductsTable.stock] = ProductsTable.stock - line.quantity
                 }
+            }
+            if (rowsUpdated == 0) {
+                throw BadRequestException("Sản phẩm '${line.productName}' vừa hết hàng. Vui lòng cập nhật giỏ hàng và thử lại.")
             }
         }
 
@@ -861,7 +872,8 @@ class CheckoutService {
                     code = normalizedCode,
                     discountAmount = computed.discountAmount,
                     rewardRedemptionId = rewardVoucher[RewardRedemptionsTable.id],
-                    source = "REWARD_VOUCHER"
+                    source = "REWARD_VOUCHER",
+                    isFreeship = computed.isFreeship
                 )
             }
         }
@@ -875,7 +887,8 @@ class CheckoutService {
                 couponId = computed.couponId,
                 code = computed.code,
                 discountAmount = computed.discountAmount,
-                source = "PUBLIC_COUPON"
+                source = "PUBLIC_COUPON",
+                isFreeship = computed.isFreeship
             )
         }
     }
@@ -970,7 +983,8 @@ data class CheckoutPromotion(
     val code: String,
     val discountAmount: BigDecimal,
     val rewardRedemptionId: String? = null,
-    val source: String = "PUBLIC_COUPON"
+    val source: String = "PUBLIC_COUPON",
+    val isFreeship: Boolean = false
 )
 
 data class OrderDetailDto(

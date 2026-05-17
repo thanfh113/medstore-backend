@@ -99,6 +99,7 @@ data class AiConversationDto(
     val status: String,
     val escalatedToConsultant: Boolean,
     val chatSessionId: String? = null,
+    val createdAt: String? = null,
     val messages: List<AiMessageDto>
 )
 
@@ -318,6 +319,31 @@ Quy tắc bắt buộc:
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
+    fun closeConversation(conversationId: String, userId: String): AiConversationDto {
+        val row = transaction {
+            AiConversationsTable.selectAll()
+                .where { AiConversationsTable.id eq conversationId }
+                .singleOrNull()
+        } ?: throw NoSuchElementException("Conversation not found")
+
+        if (row[AiConversationsTable.userId] != userId) throw IllegalAccessException("Not your conversation")
+
+        transaction {
+            AiConversationsTable.update({ AiConversationsTable.id eq conversationId }) {
+                it[AiConversationsTable.status] = "CLOSED"
+                it[AiConversationsTable.closedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                it[AiConversationsTable.updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            }
+        }
+
+        val updated = transaction {
+            AiConversationsTable.selectAll()
+                .where { AiConversationsTable.id eq conversationId }
+                .single()
+        }
+        return rowToDto(updated)
+    }
+
     private fun rowToDto(row: org.jetbrains.exposed.sql.ResultRow): AiConversationDto {
         val messages = decodeStoredHistory(row[AiConversationsTable.conversationHistory]).map { content ->
             AiMessageDto(
@@ -331,6 +357,7 @@ Quy tắc bắt buộc:
             status = row[AiConversationsTable.status],
             escalatedToConsultant = row[AiConversationsTable.escalatedToConsultant],
             chatSessionId = row[AiConversationsTable.chatSessionId],
+            createdAt = row[AiConversationsTable.createdAt].toString(),
             messages = messages
         )
     }

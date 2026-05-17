@@ -30,6 +30,8 @@ object CloudinaryHelper {
         BANNER         ("banners",         "image", 5 * 1024 * 1024),   // 5 MB
         SUPPLIER_LOGO  ("supplier_logos",  "image", 3 * 1024 * 1024),   // 3 MB
         REWARD_PRODUCT ("reward_products", "image", 5 * 1024 * 1024),   // 5 MB
+        EVIDENCE       ("evidence",        "image", 10 * 1024 * 1024),  // 10 MB - ảnh khiếu nại
+        REVIEW_IMAGE   ("review_images",   "image", 5 * 1024 * 1024),   // 5 MB  - ảnh đánh giá
     }
 
     fun init(application: Application) {

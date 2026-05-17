@@ -65,8 +65,9 @@ private data class InternalDashboardResponseDto(
 )
 
 private fun ResultRow.isSuccessfulOrder(): Boolean {
-    return this[OrdersTable.status].uppercase() == "DELIVERED" ||
-        this[OrdersTable.paymentStatus].uppercase() == "COMPLETED"
+    val status = this[OrdersTable.status].uppercase()
+    if (status == "RETURNED" || status == "CANCELLED") return false
+    return status == "DELIVERED" || this[OrdersTable.paymentStatus].uppercase() == "COMPLETED"
 }
 
 private fun ResultRow.isPendingOrder(): Boolean {

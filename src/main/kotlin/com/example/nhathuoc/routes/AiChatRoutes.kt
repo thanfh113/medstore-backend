@@ -103,6 +103,26 @@ fun Route.aiChatRoutes() {
                     }
                 }
 
+                // POST /ai-chat/sessions/{id}/close
+                post("/close") {
+                    val userId = call.requireAuthUserId() ?: return@post
+                    val id = call.parameters["id"]
+                        ?: return@post call.respond(HttpStatusCode.BadRequest, RouteErrorResponse("Conversation ID required"))
+                    try {
+                        val conversation = service.closeConversation(id, userId)
+                        call.respond(
+                            HttpStatusCode.OK,
+                            RouteDataMessageResponse(data = conversation, message = "Conversation closed")
+                        )
+                    } catch (e: NoSuchElementException) {
+                        call.respond(HttpStatusCode.NotFound, RouteErrorResponse(e.message ?: "Not found"))
+                    } catch (e: IllegalAccessException) {
+                        call.respond(HttpStatusCode.Forbidden, RouteErrorResponse("Access denied"))
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, RouteErrorResponse("Error: ${e.message}"))
+                    }
+                }
+
                 // POST /ai-chat/sessions/{id}/escalate
                 post("/escalate") {
                     val userId = call.requireAuthUserId() ?: return@post

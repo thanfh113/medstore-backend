@@ -167,10 +167,22 @@ fun Route.authRoutes() {
                     .firstOrNull()
             } ?: throw NotFoundException("Tài khoản không tồn tại")
 
-            if (!PasswordHelper.verify(req.password, user[UsersTable.password]))
-                throw BadRequestException("Mật khẩu không chính xác")
+            // Check lock before password so locked accounts aren't told "wrong password"
             if (!user[UsersTable.isActive])
                 throw BadRequestException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ")
+
+            if (!PasswordHelper.verify(req.password, user[UsersTable.password])) {
+                val newAttempts = user[UsersTable.failedLoginAttempts] + 1
+                transaction {
+                    UsersTable.update({ UsersTable.id eq user[UsersTable.id] }) {
+                        it[failedLoginAttempts] = newAttempts
+                        if (newAttempts >= 5) it[isActive] = false
+                    }
+                }
+                if (newAttempts >= 5)
+                    throw BadRequestException("Tài khoản đã bị khóa do nhập sai mật khẩu quá 5 lần. Vui lòng liên hệ hỗ trợ.")
+                throw BadRequestException("Mật khẩu không chính xác. Còn ${5 - newAttempts} lần thử.")
+            }
 
             val userId    = user[UsersTable.id]
             val role      = user[UsersTable.role]
@@ -179,6 +191,11 @@ fun Route.authRoutes() {
             val newRefresh = JwtHelper.generateRefreshToken(userId)
 
             transaction {
+                // Reset failed attempts and update last login time on success
+                UsersTable.update({ UsersTable.id eq userId }) {
+                    it[failedLoginAttempts] = 0
+                    it[lastLoginAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                }
                 RefreshTokensTable.deleteWhere { RefreshTokensTable.userId eq userId }
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()

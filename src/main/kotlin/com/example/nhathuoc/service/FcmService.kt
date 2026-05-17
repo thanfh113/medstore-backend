@@ -57,7 +57,8 @@ object FcmService {
         title: String,
         body: String,
         type: String,
-        refId: String? = null
+        refId: String? = null,
+        notificationId: String? = null
     ) {
         val fcm = messaging ?: return
 
@@ -80,6 +81,7 @@ object FcmService {
                 )
                 .putData("type", type)
                 .apply { if (!refId.isNullOrBlank()) putData("refId", refId) }
+                .apply { if (!notificationId.isNullOrBlank()) putData("notificationId", notificationId) }
                 .build()
 
             fcm.send(message)
