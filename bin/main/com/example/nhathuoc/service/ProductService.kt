@@ -40,7 +40,6 @@ data class ProductDto(
     val riskClassification: String,
     val requiresCertification: Boolean,
     val requiresConsultation: Boolean,
-    val targetAudience: String,
     val isActive: Boolean,
     val isFlashSale: Boolean,
     val flashSaleEnd: LocalDateTime?,
@@ -75,7 +74,6 @@ data class ProductDto(
         "riskClassification" to riskClassification,
         "requiresCertification" to requiresCertification,
         "requiresConsultation" to requiresConsultation,
-        "targetAudience" to targetAudience,
         "isActive" to isActive,
         "isFlashSale" to isFlashSale,
         "flashSaleEnd" to flashSaleEnd?.toString(),
@@ -118,8 +116,6 @@ data class ProductCertificateInput(
     val publicId: String? = null,
     val resourceType: String = "image",
     val thumbnailUrl: String? = null,
-    val issueDate: String? = null,
-    val expireDate: String? = null,
     val issuer: String? = null,
     val isActive: Boolean = true
 )
@@ -133,8 +129,6 @@ data class ProductCertificateDto(
     val publicId: String?,
     val resourceType: String,
     val thumbnailUrl: String?,
-    val issueDate: String?,
-    val expireDate: String?,
     val issuer: String?,
     val isActive: Boolean
 ) {
@@ -147,8 +141,6 @@ data class ProductCertificateDto(
         "publicId" to publicId,
         "resourceType" to resourceType,
         "thumbnailUrl" to thumbnailUrl,
-        "issueDate" to issueDate,
-        "expireDate" to expireDate,
         "issuer" to issuer,
         "isActive" to isActive
     )
@@ -178,7 +170,6 @@ data class CreateProductRequest(
     val riskClassification: String = "A",
     val requiresCertification: Boolean = false,
     val requiresConsultation: Boolean = false,
-    val targetAudience: String = "ALL",
     val isActive: Boolean = true,
     val attributes: Map<String, Any> = emptyMap(),
     val images: List<ProductImageInput> = emptyList(),
@@ -210,7 +201,6 @@ data class UpdateProductRequest(
     val riskClassification: String?,
     val requiresCertification: Boolean?,
     val requiresConsultation: Boolean?,
-    val targetAudience: String? = null,
     val isActive: Boolean?,
     val attributes: Map<String, Any>?,
     val images: List<ProductImageInput>?,
@@ -422,7 +412,6 @@ class ProductService {
                 it[ProductsTable.riskClassification] = riskClassification
                 it[ProductsTable.requiresCertification] = request.requiresCertification || directConsultationOnly
                 it[ProductsTable.requiresConsultation] = request.requiresConsultation || directConsultationOnly
-                it[ProductsTable.targetAudience] = request.targetAudience.ifBlank { "ALL" }
                 it[ProductsTable.isActive] = request.isActive
             }
 
@@ -495,7 +484,6 @@ class ProductService {
                     it[ProductsTable.requiresConsultation] =
                         (request.requiresConsultation ?: product[ProductsTable.requiresConsultation]) || directConsultationOnly
                 }
-                request.targetAudience?.let { value -> it[ProductsTable.targetAudience] = value.ifBlank { "ALL" } }
                 request.isActive?.let { value -> it[ProductsTable.isActive] = value }
                 it[ProductsTable.updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
             }
@@ -637,7 +625,6 @@ class ProductService {
             riskClassification = row[ProductsTable.riskClassification],
             requiresCertification = row[ProductsTable.requiresCertification],
             requiresConsultation = row[ProductsTable.requiresConsultation],
-            targetAudience = row[ProductsTable.targetAudience],
             isActive = row[ProductsTable.isActive],
             isFlashSale = row[ProductsTable.isFlashSale],
             flashSaleEnd = row[ProductsTable.flashSaleEnd],
@@ -680,8 +667,6 @@ class ProductService {
                     publicId = row[ProductCertificatesTable.cloudinaryPublicId],
                     resourceType = row[ProductCertificatesTable.cloudinaryResourceType],
                     thumbnailUrl = row[ProductCertificatesTable.thumbnailUrl],
-                    issueDate = row[ProductCertificatesTable.issueDate],
-                    expireDate = row[ProductCertificatesTable.expireDate],
                     issuer = row[ProductCertificatesTable.issuer],
                     isActive = row[ProductCertificatesTable.isActive]
                 )
@@ -743,8 +728,6 @@ class ProductService {
                     it[ProductCertificatesTable.cloudinaryResourceType] =
                         certificate.resourceType.ifBlank { detectResourceType(certificate.fileUrl) }
                     it[ProductCertificatesTable.thumbnailUrl] = certificate.thumbnailUrl?.ifBlank { null }
-                    it[ProductCertificatesTable.issueDate] = certificate.issueDate?.ifBlank { null }
-                    it[ProductCertificatesTable.expireDate] = certificate.expireDate?.ifBlank { null }
                     it[ProductCertificatesTable.issuer] = certificate.issuer?.ifBlank { null }
                     it[ProductCertificatesTable.isActive] = certificate.isActive
                 }

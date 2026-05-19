@@ -37,7 +37,6 @@ fun Application.configureDatabase() {
             // Core user & authentication tables
             UsersTable,
             RefreshTokensTable,
-            UserVerificationTokensTable,
             EmployeeProfilesTable,
 
             // Product & category tables
@@ -90,16 +89,6 @@ private fun migrateRefreshTokensTable() {
     }
     try {
         execQuietly("ALTER TABLE refresh_tokens ADD COLUMN revoked_at DATETIME NULL AFTER expires_at")
-    } catch (e: Exception) {
-        // Column already exists
-    }
-    try {
-        execQuietly("ALTER TABLE refresh_tokens ADD COLUMN device_info VARCHAR(255) NULL AFTER revoked_at")
-    } catch (e: Exception) {
-        // Column already exists
-    }
-    try {
-        execQuietly("ALTER TABLE refresh_tokens ADD COLUMN ip_address VARCHAR(45) NULL AFTER device_info")
     } catch (e: Exception) {
         // Column already exists
     }

@@ -4,6 +4,7 @@ import com.example.nhathuoc.database.tables.EmployeeProfilesTable
 import com.example.nhathuoc.database.tables.BannersTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
+import com.example.nhathuoc.database.tables.PaymentsTable
 import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.RefreshTokensTable
 import com.example.nhathuoc.database.tables.RewardAccountsTable
@@ -32,6 +33,7 @@ import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -58,11 +60,14 @@ private data class FinanceSummaryDto(
     val posRevenue: Double,
     val totalDiscount: Double,
     val totalExpenses: Double,
+    val totalRefunds: Double = 0.0,
     val netProfit: Double,
     val successfulOrderCount: Int,
     val expenseCount: Int,
     val averageOrderValue: Double = 0.0,
     val cancelledOrderCount: Int = 0,
+    val refundedOrderCount: Int = 0,
+    val returnedOrderCount: Int = 0,
     val totalOrderCount: Int = 0,
     val topSellingProducts: List<TopSellingProductDto> = emptyList()
 )
@@ -90,7 +95,6 @@ private data class AdminDashboardDto(
 private data class AdminEmployeeProfileDto(
     val id: String,
     val qualificationTitle: String,
-    val qualificationSpecialty: String? = null,
     val qualificationInstitution: String? = null,
     val qualificationDocumentUrl: String? = null,
     val qualificationDocumentPublicId: String? = null,
@@ -108,7 +112,6 @@ private data class AdminEmployeeProfileDto(
 @kotlinx.serialization.Serializable
 private data class AdminEmployeeProfileRequest(
     val qualificationTitle: String? = null,
-    val qualificationSpecialty: String? = null,
     val qualificationInstitution: String? = null,
     val qualificationDocumentUrl: String? = null,
     val qualificationDocumentPublicId: String? = null,
@@ -187,7 +190,6 @@ private fun ResultRow.toEmployeeProfileDto(): AdminEmployeeProfileDto? {
     return AdminEmployeeProfileDto(
         id = profileId,
         qualificationTitle = this[EmployeeProfilesTable.qualificationTitle],
-        qualificationSpecialty = this[EmployeeProfilesTable.qualificationSpecialty],
         qualificationInstitution = this[EmployeeProfilesTable.qualificationInstitution],
         qualificationDocumentUrl = documentUrl?.let { CloudinaryHelper.signedDeliveryUrl(it, documentResourceType) },
         qualificationDocumentPublicId = this[EmployeeProfilesTable.qualificationDocumentPublicId],
@@ -247,7 +249,6 @@ private fun upsertEmployeeProfile(
             it[EmployeeProfilesTable.userId] = userId
             it[EmployeeProfilesTable.qualificationTitle] =
                 request?.qualificationTitle.trimToNull() ?: DEFAULT_EMPLOYEE_QUALIFICATION_TITLE
-            it[EmployeeProfilesTable.qualificationSpecialty] = request?.qualificationSpecialty.trimToNull()
             it[EmployeeProfilesTable.qualificationInstitution] = request?.qualificationInstitution.trimToNull()
             it[EmployeeProfilesTable.qualificationDocumentUrl] = documentUrl
             it[EmployeeProfilesTable.qualificationDocumentPublicId] = request?.qualificationDocumentPublicId.trimToNull()
@@ -283,7 +284,6 @@ private fun upsertEmployeeProfile(
     EmployeeProfilesTable.update({ EmployeeProfilesTable.userId eq userId }) {
         it[EmployeeProfilesTable.qualificationTitle] =
             request.qualificationTitle.trimToNull() ?: existing[EmployeeProfilesTable.qualificationTitle]
-        it[EmployeeProfilesTable.qualificationSpecialty] = request.qualificationSpecialty.trimToNull()
         it[EmployeeProfilesTable.qualificationInstitution] = request.qualificationInstitution.trimToNull()
         it[EmployeeProfilesTable.qualificationDocumentUrl] = documentUrl
         it[EmployeeProfilesTable.qualificationDocumentPublicId] = documentPublicId
@@ -476,10 +476,13 @@ fun Route.adminRoutes(
                         allOrders
                     }
 
+                    val refundedPaymentStatuses = setOf("REFUNDED", "PARTIALLY_REFUNDED")
+                    // Đơn "thành công": không hủy/trả, đã giao hoặc đã thanh toán, chưa bị hoàn tiền toàn phần
                     val successfulOrders = orderRows.filter {
                         val s = it[OrdersTable.status]
-                        s != "RETURNED" && s != "CANCELLED" &&
-                            (s == "DELIVERED" || it[OrdersTable.paymentStatus] == "COMPLETED")
+                        val ps = it[OrdersTable.paymentStatus]
+                        s != "RETURNED" && s != "CANCELLED" && ps != "REFUNDED" &&
+                            (s == "DELIVERED" || ps == "COMPLETED" || ps == "PARTIALLY_REFUNDED")
                     }
 
                     val grossRevenue = successfulOrders.sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
@@ -508,6 +511,16 @@ fun Route.adminRoutes(
 
                     val totalExpenses = soldGoodsCost.toDouble()
 
+                    // Tổng tiền đã hoàn trả từ PaymentsTable (method=REFUND, status=COMPLETED)
+                    val allOrderIdsInPeriod = orderRows.map { it[OrdersTable.id] }.toSet()
+                    val totalRefunds = PaymentsTable.selectAll()
+                        .where {
+                            (PaymentsTable.method eq "REFUND") and
+                            (PaymentsTable.status eq "COMPLETED") and
+                            (PaymentsTable.orderId inList allOrderIdsInPeriod)
+                        }
+                        .sumOf { it[PaymentsTable.amount]?.toDouble() ?: 0.0 }
+
                     val topSellingProducts = allOrderItems
                         .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
                         .groupBy { it[OrderItemsTable.productId] ?: "" }
@@ -524,6 +537,8 @@ fun Route.adminRoutes(
                         .take(10)
 
                     val cancelledOrderCount = orderRows.count { it[OrdersTable.status] == "CANCELLED" }
+                    val refundedOrderCount = orderRows.count { it[OrdersTable.paymentStatus] in refundedPaymentStatuses }
+                    val returnedOrderCount = orderRows.count { it[OrdersTable.status] == "RETURNED" }
 
                     FinanceSummaryDto(
                         shopId = null,
@@ -532,11 +547,14 @@ fun Route.adminRoutes(
                         posRevenue = posRevenue,
                         totalDiscount = totalDiscount,
                         totalExpenses = totalExpenses,
-                        netProfit = grossRevenue - totalExpenses,
+                        totalRefunds = totalRefunds,
+                        netProfit = grossRevenue - totalExpenses - totalRefunds,
                         successfulOrderCount = successfulOrders.size,
                         expenseCount = 0,
                         averageOrderValue = if (successfulOrders.isEmpty()) 0.0 else grossRevenue / successfulOrders.size,
                         cancelledOrderCount = cancelledOrderCount,
+                        refundedOrderCount = refundedOrderCount,
+                        returnedOrderCount = returnedOrderCount,
                         totalOrderCount = orderRows.size,
                         topSellingProducts = topSellingProducts
                     )

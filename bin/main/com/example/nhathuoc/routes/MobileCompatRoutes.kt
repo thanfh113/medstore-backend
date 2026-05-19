@@ -6,6 +6,8 @@ import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.PaymentsTable
 import com.example.nhathuoc.database.tables.ProductImagesTable
+import com.example.nhathuoc.database.tables.ReviewsTable
+import com.example.nhathuoc.database.tables.UsersTable
 import com.example.nhathuoc.plugins.NotFoundException
 import com.example.nhathuoc.service.CheckoutRequest
 import com.example.nhathuoc.service.CheckoutService
@@ -156,7 +158,8 @@ private data class CompatOrderItemDto(
     val unit: String,
     val price: Double,
     val totalPrice: Double? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val hasReviewed: Boolean = false
 )
 
 @Serializable
@@ -462,7 +465,15 @@ fun Route.mobileCompatRoutes() {
                 val result = transaction {
                     var base = OrdersTable.selectAll().where { OrdersTable.userId eq userId }
                     if (!status.isNullOrBlank()) {
-                        base = OrdersTable.selectAll().where { (OrdersTable.userId eq userId) and (OrdersTable.status eq status) }
+                        base = if (status.uppercase() == "RETURNED") {
+                            // "Hoàn trả" tab: include status=RETURNED OR fully refunded (covers ZaloPay async refund)
+                            OrdersTable.selectAll().where {
+                                (OrdersTable.userId eq userId) and
+                                ((OrdersTable.status eq "RETURNED") or (OrdersTable.paymentStatus eq "REFUNDED"))
+                            }
+                        } else {
+                            OrdersTable.selectAll().where { (OrdersTable.userId eq userId) and (OrdersTable.status eq status) }
+                        }
                     }
 
                     val total = base.count().toInt()
@@ -490,31 +501,46 @@ fun Route.mobileCompatRoutes() {
                                 }
                         }
 
+                        val reviewedKeys: Set<String> = if (orderIds.isEmpty()) emptySet() else
+                            ReviewsTable.selectAll()
+                                .where {
+                                    (ReviewsTable.userId eq userId) and
+                                        (ReviewsTable.orderId inList orderIds) and
+                                        ReviewsTable.deletedAt.isNull()
+                                }
+                                .map { "${it[ReviewsTable.orderId]}:${it[ReviewsTable.productId]}" }
+                                .toSet()
+
                         rawItems.groupBy { it[OrderItemsTable.orderId] }
                             .mapValues { (_, rows) ->
                                 rows.map { r ->
                                     val pid = r[OrderItemsTable.productId] ?: ""
+                                    val oid = r[OrderItemsTable.orderId]
                                     CompatOrderItemDto(
                                         id = r[OrderItemsTable.id],
-                                        orderId = r[OrderItemsTable.orderId],
+                                        orderId = oid,
                                         productId = pid,
                                         name = r[OrderItemsTable.name],
                                         imageUrl = primaryImages[pid],
                                         quantity = r[OrderItemsTable.quantity],
                                         unit = r[OrderItemsTable.unit],
                                         price = r[OrderItemsTable.price].toDouble(),
-                                        totalPrice = r[OrderItemsTable.price].toDouble() * r[OrderItemsTable.quantity]
+                                        totalPrice = r[OrderItemsTable.price].toDouble() * r[OrderItemsTable.quantity],
+                                        hasReviewed = reviewedKeys.contains("$oid:$pid")
                                     )
                                 }
                             }
                     }
 
                     val orders = orderRows.map { row ->
+                            val rawStatus = row[OrdersTable.status]
+                            val rawPaymentStatus = row[OrdersTable.paymentStatus] ?: "UNPAID"
+                            val effectiveStatus = if (rawStatus == "DELIVERED" && rawPaymentStatus == "REFUNDED") "RETURNED" else rawStatus
                             CompatOrderDto(
                                 id = row[OrdersTable.id],
                                 orderCode = row[OrdersTable.orderCode],
                                 userId = row[OrdersTable.userId] ?: "",
-                                status = row[OrdersTable.status],
+                                status = effectiveStatus,
                                 pickupType = row[OrdersTable.pickupType] ?: "DELIVERY",
                                 branchId = row[OrdersTable.branchId],
                                 addressId = row[OrdersTable.addressId],
@@ -526,7 +552,7 @@ fun Route.mobileCompatRoutes() {
                                 pointsEarned = row[OrdersTable.pointsEarned],
                                 total = row[OrdersTable.total]?.toDouble(),
                                 paymentMethod = row[OrdersTable.paymentMethod] ?: "COD",
-                                paymentStatus = row[OrdersTable.paymentStatus] ?: "UNPAID",
+                                paymentStatus = rawPaymentStatus,
                                 shippingAddress = null,
                                 note = row[OrdersTable.note],
                                 estimatedDelivery = null,
@@ -554,6 +580,105 @@ fun Route.mobileCompatRoutes() {
                 call.respond(result)
             }
 
+            get("/pos") {
+                val userId = call.principal<JWTPrincipal>()?.getUserId()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                val page = call.parameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
+                val offset = (page - 1L) * limit
+
+                val result = transaction {
+                    val userPhone = UsersTable.selectAll()
+                        .where { UsersTable.id eq userId }
+                        .singleOrNull()?.get(UsersTable.phone)
+                        ?: return@transaction CompatOrderListResponse(
+                            orders = emptyList(),
+                            pagination = RoutePaginationResponse(page, limit, 0, 0, false, false)
+                        )
+
+                    val base = OrdersTable.selectAll().where {
+                        (OrdersTable.orderChannel eq "POS") and
+                        ((OrdersTable.userId eq userId) or (OrdersTable.shippingPhone eq userPhone))
+                    }
+                    val total = base.count().toInt()
+                    val orderRows = base
+                        .orderBy(OrdersTable.createdAt to SortOrder.DESC)
+                        .limit(limit, offset)
+                        .toList()
+
+                    val orderIds = orderRows.map { it[OrdersTable.id] }
+                    val itemsByOrder = if (orderIds.isEmpty()) emptyMap() else {
+                        val rawItems = OrderItemsTable.selectAll()
+                            .where { OrderItemsTable.orderId inList orderIds }
+                            .toList()
+                        val productIds = rawItems.mapNotNull { it[OrderItemsTable.productId] }.distinct()
+                        val primaryImages = if (productIds.isEmpty()) emptyMap() else {
+                            ProductImagesTable.selectAll()
+                                .where { ProductImagesTable.productId inList productIds }
+                                .groupBy { it[ProductImagesTable.productId] }
+                                .mapValues { (_, rows) ->
+                                    rows.minByOrNull { it[ProductImagesTable.sortOrder] }?.get(ProductImagesTable.url)
+                                }
+                        }
+                        rawItems.groupBy { it[OrderItemsTable.orderId] }
+                            .mapValues { (_, rows) ->
+                                rows.map { r ->
+                                    val pid = r[OrderItemsTable.productId] ?: ""
+                                    CompatOrderItemDto(
+                                        id = r[OrderItemsTable.id],
+                                        orderId = r[OrderItemsTable.orderId],
+                                        productId = pid,
+                                        name = r[OrderItemsTable.name],
+                                        imageUrl = primaryImages[pid],
+                                        quantity = r[OrderItemsTable.quantity],
+                                        unit = r[OrderItemsTable.unit],
+                                        price = r[OrderItemsTable.price].toDouble(),
+                                        totalPrice = r[OrderItemsTable.price].toDouble() * r[OrderItemsTable.quantity],
+                                        hasReviewed = false
+                                    )
+                                }
+                            }
+                    }
+                    val orders = orderRows.map { row ->
+                        CompatOrderDto(
+                            id = row[OrdersTable.id],
+                            orderCode = row[OrdersTable.orderCode],
+                            userId = userId,
+                            status = row[OrdersTable.status],
+                            pickupType = "PICKUP",
+                            branchId = row[OrdersTable.branchId],
+                            addressId = null,
+                            items = itemsByOrder[row[OrdersTable.id]] ?: emptyList(),
+                            subtotal = row[OrdersTable.subtotal]?.toDouble(),
+                            shippingFee = 0.0,
+                            discount = row[OrdersTable.discount].toDouble(),
+                            pointsUsed = row[OrdersTable.pointsUsed],
+                            pointsEarned = row[OrdersTable.pointsEarned],
+                            total = row[OrdersTable.total]?.toDouble(),
+                            paymentMethod = row[OrdersTable.paymentMethod] ?: "CASH",
+                            paymentStatus = row[OrdersTable.paymentStatus] ?: "COMPLETED",
+                            shippingAddress = null,
+                            note = row[OrdersTable.note],
+                            estimatedDelivery = null,
+                            deliveredAt = row[OrdersTable.completedAt]?.toString(),
+                            cancelledAt = null,
+                            cancelReason = null,
+                            createdAt = row[OrdersTable.createdAt].toString(),
+                            updatedAt = row[OrdersTable.updatedAt].toString()
+                        )
+                    }
+                    CompatOrderListResponse(
+                        orders = orders,
+                        pagination = RoutePaginationResponse(
+                            page = page, limit = limit, total = total,
+                            totalPages = if (total == 0) 0 else ((total + limit - 1) / limit),
+                            hasNext = offset + limit < total, hasPrev = page > 1
+                        )
+                    )
+                }
+                call.respond(result)
+            }
+
             get("/{orderId}") {
                 val userId = call.principal<JWTPrincipal>()?.getUserId()
                     ?: return@get call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
@@ -561,6 +686,19 @@ fun Route.mobileCompatRoutes() {
                     ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Order ID is required"))
 
                 val detail = checkoutService.getOrderDetails(orderId, userId)
+                val (orderRow, reviewedProductIds) = transaction {
+                    val row = OrdersTable.selectAll()
+                        .where { (OrdersTable.id eq orderId) and (OrdersTable.userId eq userId) }.single()
+                    val reviewed = ReviewsTable.selectAll()
+                        .where {
+                            (ReviewsTable.userId eq userId) and
+                                (ReviewsTable.orderId eq orderId) and
+                                ReviewsTable.deletedAt.isNull()
+                        }
+                        .map { it[ReviewsTable.productId] }
+                        .toSet()
+                    row to reviewed
+                }
                 val items = detail.items.map {
                     CompatOrderItemDto(
                         id = it.id,
@@ -573,11 +711,9 @@ fun Route.mobileCompatRoutes() {
                         unit = it.unit ?: "Cái",
                         price = it.price.toDouble(),
                         totalPrice = it.price.toDouble() * it.quantity,
-                        createdAt = null
+                        createdAt = null,
+                        hasReviewed = reviewedProductIds.contains(it.productId ?: "")
                     )
-                }
-                val orderRow = transaction {
-                    OrdersTable.selectAll().where { (OrdersTable.id eq orderId) and (OrdersTable.userId eq userId) }.single()
                 }
 
                 call.respond(

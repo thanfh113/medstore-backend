@@ -12,10 +12,7 @@ import org.jetbrains.exposed.sql.kotlin.datetime.CurrentDateTime
 object UsersTable : Table("users") {
     val id          = varchar("id", 36)           // UUID string
     val phone       = varchar("phone", 15).uniqueIndex()
-    val phoneVerified = bool("phone_verified").default(false)
     val email       = varchar("email", 255).nullable().uniqueIndex()
-    val emailVerified = bool("email_verified").default(false)
-    val emailVerifiedAt = datetime("email_verified_at").nullable()
     val password    = varchar("password", 255)
     val fullName    = varchar("full_name", 100).nullable()
     val avatarUrl   = text("avatar_url").nullable()
@@ -41,8 +38,6 @@ object RefreshTokensTable : Table("refresh_tokens") {
     val tokenHash  = varchar("token_hash", 64).nullable()
     val expiresAt  = datetime("expires_at")
     val revokedAt  = datetime("revoked_at").nullable()
-    val deviceInfo = varchar("device_info", 255).nullable()
-    val ipAddress  = varchar("ip_address", 45).nullable()
     val createdAt  = datetime("created_at").defaultExpression(CurrentDateTime)
     override val primaryKey = PrimaryKey(id)
 }
@@ -55,7 +50,6 @@ object EmployeeProfilesTable : Table("employee_profiles") {
     val id                            = varchar("id", 36)
     val userId                        = varchar("user_id", 36).references(UsersTable.id).uniqueIndex()
     val qualificationTitle            = varchar("qualification_title", 255)
-    val qualificationSpecialty        = varchar("qualification_specialty", 255).nullable()
     val qualificationInstitution      = varchar("qualification_institution", 255).nullable()
     val qualificationDocumentUrl      = text("qualification_document_url").nullable()
     val qualificationDocumentPublicId = varchar("qualification_document_public_id", 255).nullable()
@@ -72,23 +66,6 @@ object EmployeeProfilesTable : Table("employee_profiles") {
 
     init {
         index(false, qualificationVerified)
-    }
-}
-
-object UserVerificationTokensTable : Table("user_verification_tokens") {
-    val id         = varchar("id", 36)
-    val userId     = varchar("user_id", 36).references(UsersTable.id)
-    val purpose    = varchar("purpose", 30)
-    val email      = varchar("email", 255).nullable()
-    val tokenHash  = varchar("token_hash", 128)
-    val expiresAt  = datetime("expires_at")
-    val consumedAt = datetime("consumed_at").nullable()
-    val createdAt  = datetime("created_at").defaultExpression(CurrentDateTime)
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        index(false, userId, purpose, expiresAt)
-        index(false, tokenHash)
     }
 }
 
@@ -186,7 +163,6 @@ object ProductsTable : Table("products") {
     val riskClassification = varchar("risk_classification", 1).default("A")  // Phân loại A|B|C|D theo TTBYT
     val requiresCertification = bool("requires_certification").default(false)  // Cần chứng nhận CE/ISO/FDA
     val requiresConsultation = bool("requires_consultation").default(false)  // Cần tư vấn kỹ thuật trước khi sử dụng
-    val targetAudience     = varchar("target_audience", 50).default("ALL")
     val isActive           = bool("is_active").default(true)
     val isFlashSale        = bool("is_flash_sale").default(false)
     val isBestSeller       = bool("is_best_seller").default(false)
@@ -221,8 +197,6 @@ object ProductCertificatesTable : Table("product_certificates") {
     val cloudinaryPublicId = varchar("cloudinary_public_id", 255).nullable()
     val cloudinaryResourceType = varchar("cloudinary_resource_type", 20).default("image")
     val thumbnailUrl = text("thumbnail_url").nullable()
-    val issueDate   = varchar("issue_date", 20).nullable()
-    val expireDate  = varchar("expire_date", 20).nullable()
     val issuer      = varchar("issuer", 200).nullable()  // Cơ quan cấp
     val isActive    = bool("is_active").default(true)
     val createdAt   = datetime("created_at").defaultExpression(CurrentDateTime)
@@ -321,7 +295,6 @@ object OrdersTable : Table("orders") {
     val cashChange    = decimal("cash_change", 12, 2).nullable()
     val paymentMethod = varchar("payment_method", 30).nullable() // COD | MOMO | CARD
     val paymentStatus = varchar("payment_status", 20).default("UNPAID")
-    val paymentProvider = varchar("payment_provider", 50).nullable()
     val note          = text("note").nullable()
     val createdAt     = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt     = datetime("updated_at").defaultExpression(CurrentDateTime)
@@ -426,6 +399,7 @@ object RewardProductsTable : Table("reward_products") {
     val stock     = integer("stock").default(0)
     val isActive  = bool("is_active").default(true)
     val sortOrder = integer("sort_order").default(0)
+    val usagePerUserLimit = integer("usage_per_user_limit").nullable()
     val updatedAt = datetime("updated_at").defaultExpression(CurrentDateTime)
     override val primaryKey = PrimaryKey(id)
 
@@ -471,11 +445,8 @@ object AiConversationsTable : Table("ai_conversations") {
     val userId                   = varchar("user_id", 36).references(UsersTable.id)
     val productId                = varchar("product_id", 36).references(ProductsTable.id).nullable()
     val conversationHistory      = text("conversation_history").nullable() // JSON as TEXT
-    val intent                   = varchar("intent", 100).nullable()
-    val sentiment                = varchar("sentiment", 20).nullable()
     val status                   = varchar("status", 20).default("ACTIVE")
     val escalatedToConsultant    = bool("escalated_to_consultant").default(false)
-    val consultantId             = varchar("consultant_id", 36).references(UsersTable.id).nullable()
     val createdAt                = datetime("created_at").defaultExpression(CurrentDateTime)
     val closedAt                 = datetime("closed_at").nullable()
     val updatedAt                = datetime("updated_at").defaultExpression(CurrentDateTime)
@@ -600,6 +571,7 @@ object OrderComplaintsTable : Table("order_complaints") {
     val refundTransactionId = varchar("refund_transaction_id", 100).nullable()
     val refundedBy    = varchar("refunded_by", 36).references(UsersTable.id).nullable()
     val refundedAt    = datetime("refunded_at").nullable()
+    val restoreStock  = bool("restore_stock").default(false)
     val handledBy     = varchar("handled_by", 36).references(UsersTable.id).nullable()
     val createdAt     = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt     = datetime("updated_at").defaultExpression(CurrentDateTime)

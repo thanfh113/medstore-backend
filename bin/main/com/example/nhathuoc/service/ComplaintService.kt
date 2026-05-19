@@ -3,6 +3,7 @@ package com.example.nhathuoc.service
 import com.example.nhathuoc.database.tables.OrderComplaintsTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
+import com.example.nhathuoc.database.tables.PaymentsTable
 import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.UsersTable
 import kotlinx.datetime.Clock
@@ -57,7 +58,8 @@ data class UpdateComplaintRequest(
     val refundStatus: String? = null,
     val refundMethod: String? = null,
     val refundTransactionId: String? = null,
-    val handledBy: String? = null
+    val handledBy: String? = null,
+    val restoreStock: Boolean = false
 )
 
 @Serializable
@@ -124,6 +126,7 @@ data class ComplaintDto(
     val updatedAt: String,
     val resolvedAt: String? = null,
     val closedAt: String? = null,
+    val orderTotal: Double? = null,
     val attachments: List<ComplaintAttachmentDto> = emptyList(),
     val messages: List<ComplaintMessageDto> = emptyList(),
     val events: List<ComplaintEventDto> = emptyList()
@@ -131,6 +134,7 @@ data class ComplaintDto(
 
 class ComplaintService {
     private val notificationService = NotificationService()
+    private val paymentService = PaymentService()
     private val complaintJson = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -144,10 +148,10 @@ class ComplaintService {
         "OPEN", "IN_REVIEW", "NEED_MORE_INFO", "APPROVED",
         "REJECTED", "RESOLVED", "CANCELLED"
     )
-    private val allowedRefundStatuses = setOf("NONE", "REQUESTED", "APPROVED", "REFUNDED", "REJECTED")
+    private val allowedRefundStatuses = setOf("NONE", "REQUESTED", "APPROVED", "REFUNDED", "REFUND_PROCESSING", "REJECTED")
     private val allowedRefundMethods = setOf("ORIGINAL_PAYMENT", "BANK_TRANSFER", "CASH", "POINTS", "OTHER")
     private val allowedPriorities = setOf("LOW", "NORMAL", "HIGH", "URGENT")
-    private val complaintEligibleOrderStatuses = setOf("PROCESSING", "SHIPPING", "DELIVERED")
+    private val complaintEligibleOrderStatuses = setOf("DELIVERED")
     private val closedComplaintStatuses = setOf("RESOLVED", "REJECTED", "CANCELLED")
 
     fun createComplaint(userId: String, request: CreateComplaintRequest): ComplaintDto = transaction {
@@ -164,8 +168,20 @@ class ComplaintService {
             ?: throw IllegalArgumentException("Order not found")
         val orderStatus = order[OrdersTable.status].uppercase()
         val paymentStatus = order[OrdersTable.paymentStatus].uppercase()
-        require(orderStatus in complaintEligibleOrderStatuses || paymentStatus == "COMPLETED") {
-            "Complaint can be created after the order is paid or being processed"
+        require(orderStatus in complaintEligibleOrderStatuses) {
+            "Chỉ có thể khiếu nại sau khi đã nhận được hàng"
+        }
+
+        val completedAt = order[OrdersTable.completedAt]
+        if (completedAt != null) {
+            val nowJava = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+            val daysSinceCompleted = java.time.temporal.ChronoUnit.DAYS.between(
+                completedAt.toJavaLocalDateTime(),
+                nowJava
+            )
+            require(daysSinceCompleted <= 30) {
+                "Đã quá 30 ngày kể từ khi đơn hàng hoàn thành, không thể tạo khiếu nại"
+            }
         }
 
         val productId = resolveComplaintProductId(request.orderId, request.orderItemId, request.productId)
@@ -176,22 +192,14 @@ class ComplaintService {
                 .count() > 0
             require(validOrderItem) { "Order item not found" }
         }
-        val duplicateOpenComplaint = OrderComplaintsTable.selectAll()
+        val existingComplaint = OrderComplaintsTable.selectAll()
             .where {
                 (OrderComplaintsTable.userId eq userId) and
-                    (OrderComplaintsTable.orderId eq request.orderId) and
-                    OrderComplaintsTable.status.notInList(closedComplaintStatuses.toList())
-            }
-            .let { query ->
-                if (orderItemId != null) {
-                    query.andWhere { OrderComplaintsTable.orderItemId eq orderItemId }
-                } else {
-                    query.andWhere { OrderComplaintsTable.orderItemId.isNull() }
-                }
+                    (OrderComplaintsTable.orderId eq request.orderId)
             }
             .count() > 0
-        require(!duplicateOpenComplaint) {
-            "There is already an open complaint for this order or item"
+        require(!existingComplaint) {
+            "Đơn hàng này đã có khiếu nại, không thể tạo thêm"
         }
 
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
@@ -320,7 +328,7 @@ class ComplaintService {
             ?: existing[OrderComplaintsTable.refundStatus]
         val nextRefundMethod = if (shouldClearRefund) null else request.refundMethod?.trim()?.uppercase()?.ifBlank { existing[OrderComplaintsTable.refundMethod] }
             ?: existing[OrderComplaintsTable.refundMethod]
-        val nextRefundTransactionId = if (shouldClearRefund) null else request.refundTransactionId?.trim()?.ifBlank { existing[OrderComplaintsTable.refundTransactionId] }
+        val requestedRefundTransactionId = if (shouldClearRefund) null else request.refundTransactionId?.trim()?.ifBlank { existing[OrderComplaintsTable.refundTransactionId] }
             ?: existing[OrderComplaintsTable.refundTransactionId]
         require(nextStatus in allowedStatuses) { "Invalid complaint status" }
         require(nextPriority in allowedPriorities) { "Invalid complaint priority" }
@@ -335,17 +343,33 @@ class ComplaintService {
             }
         }
 
+        // Admin gửi REFUNDED + ORIGINAL_PAYMENT → gọi gateway thực sự.
+        // Nếu gateway fail, exception lan ra ngoài → transaction rollback → DB KHÔNG bị set REFUNDED nhầm.
+        val isRequestingGatewayRefund = nextRefundStatus == "REFUNDED" &&
+            existing[OrderComplaintsTable.refundStatus] !in setOf("REFUNDED", "REFUND_PROCESSING") &&
+            nextRefundMethod == "ORIGINAL_PAYMENT"
+        val gatewayRefundResult: RefundResult? = if (isRequestingGatewayRefund) {
+            paymentService.processComplaintRefund(
+                orderId = existing[OrderComplaintsTable.orderId],
+                refundAmount = nextRefundAmount
+            )
+        } else null
+        // MoMo → "REFUNDED"; ZaloPay → "REFUND_PROCESSING" (async); không có gateway → giữ giá trị admin gửi
+        val effectiveRefundStatus = gatewayRefundResult?.status ?: nextRefundStatus
+        val finalRefundTransactionId = gatewayRefundResult?.transactionId ?: requestedRefundTransactionId
+
         OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
             it[status] = nextStatus
             it[priority] = nextPriority
             it[resolution] = request.resolution?.trim()?.ifBlank { null } ?: existing[OrderComplaintsTable.resolution]
             it[refundAmount] = nextRefundAmount
-            it[refundStatus] = nextRefundStatus
+            it[refundStatus] = effectiveRefundStatus
             it[refundMethod] = nextRefundMethod
-            it[refundTransactionId] = nextRefundTransactionId
+            it[refundTransactionId] = finalRefundTransactionId
             it[handledBy] = request.handledBy?.trim()?.ifBlank { null } ?: actorUserId
             it[updatedAt] = now
-            if (nextRefundStatus == "REFUNDED" && existing[OrderComplaintsTable.refundedAt] == null) {
+            if (request.restoreStock) it[restoreStock] = true
+            if (effectiveRefundStatus == "REFUNDED" && existing[OrderComplaintsTable.refundedAt] == null) {
                 it[refundedBy] = actorUserId
                 it[refundedAt] = now
             }
@@ -354,12 +378,40 @@ class ComplaintService {
                 it[closedAt] = existing[OrderComplaintsTable.closedAt] ?: now
             }
         }
-        val refundChanged = nextRefundStatus != existing[OrderComplaintsTable.refundStatus] ||
+        val refundChanged = effectiveRefundStatus != existing[OrderComplaintsTable.refundStatus] ||
             nextRefundAmount != existing[OrderComplaintsTable.refundAmount] ||
             nextRefundMethod != existing[OrderComplaintsTable.refundMethod] ||
-            nextRefundTransactionId != existing[OrderComplaintsTable.refundTransactionId]
-        if (nextRefundStatus == "REFUNDED" && existing[OrderComplaintsTable.refundStatus] != "REFUNDED") {
-            markOrderPaymentRefunded(existing[OrderComplaintsTable.orderId], nextRefundAmount, now)
+            finalRefundTransactionId != existing[OrderComplaintsTable.refundTransactionId]
+        val isNewlyRefunded = effectiveRefundStatus == "REFUNDED" && existing[OrderComplaintsTable.refundStatus] != "REFUNDED"
+        val isNewlyProcessing = effectiveRefundStatus == "REFUND_PROCESSING" &&
+            existing[OrderComplaintsTable.refundStatus] !in setOf("REFUNDED", "REFUND_PROCESSING")
+        if (isNewlyProcessing) {
+            OrdersTable.update({ OrdersTable.id eq existing[OrderComplaintsTable.orderId] }) {
+                it[OrdersTable.paymentStatus] = "REFUND_PROCESSING"
+                it[OrdersTable.updatedAt] = now
+            }
+        }
+        if (isNewlyRefunded) {
+            markOrderPaymentRefunded(
+                orderId = existing[OrderComplaintsTable.orderId],
+                refundAmount = nextRefundAmount,
+                refundMethod = nextRefundMethod,
+                refundTransactionId = finalRefundTransactionId,
+                now = now
+            )
+        }
+        if (request.restoreStock && (isNewlyRefunded || (!isNewlyRefunded && nextStatus == "RESOLVED"))) {
+            val orderRow = OrdersTable.selectAll()
+                .where { OrdersTable.id eq existing[OrderComplaintsTable.orderId] }
+                .singleOrNull()
+            if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
+                OrderLifecycleService().restoreStockOnCancel(orderRow)
+                OrderLifecycleService().revertCouponAndRewardUsage(existing[OrderComplaintsTable.orderId])
+                OrdersTable.update({ OrdersTable.id eq existing[OrderComplaintsTable.orderId] }) {
+                    it[OrdersTable.status] = "RETURNED"
+                    it[OrdersTable.updatedAt] = now
+                }
+            }
         }
         if (nextStatus != existing[OrderComplaintsTable.status] || nextPriority != existing[OrderComplaintsTable.priority]) {
             insertComplaintEvent(
@@ -384,7 +436,7 @@ class ComplaintService {
                 actorRole = "STAFF",
                 eventType = "REFUND_UPDATED",
                 title = "Cập nhật hoàn tiền",
-                description = buildRefundDescription(nextRefundStatus, nextRefundAmount, nextRefundMethod, nextRefundTransactionId),
+                description = buildRefundDescription(effectiveRefundStatus, nextRefundAmount, nextRefundMethod, finalRefundTransactionId),
                 fromStatus = existing[OrderComplaintsTable.status],
                 toStatus = nextStatus,
                 fromPriority = existing[OrderComplaintsTable.priority],
@@ -415,18 +467,28 @@ class ComplaintService {
             when {
                 refundChanged -> {
                     val refundAmountText = nextRefundAmount?.stripTrailingZeros()?.toPlainString()
-                    notificationService.createUserNotification(
-                        userId = complaintUserId,
-                        title = if (nextRefundStatus == "REFUNDED") {
-                            "Đã hoàn tiền khiếu nại"
-                        } else {
-                            "Cập nhật hoàn tiền khiếu nại"
-                        },
-                        body = buildString {
-                            append("Khiếu nại $complaintCode: trạng thái hoàn tiền $nextRefundStatus")
+                    val (notifTitle, notifBody) = when (effectiveRefundStatus) {
+                        "REFUNDED" -> "Đã hoàn tiền khiếu nại" to buildString {
+                            append("Khiếu nại $complaintCode đã được hoàn tiền")
+                            if (!refundAmountText.isNullOrBlank()) append(" $refundAmountText đ")
+                            append(" thành công.")
+                        }
+                        "REFUND_PROCESSING" -> "Đang xử lý hoàn tiền" to buildString {
+                            append("Khiếu nại $complaintCode: hoàn tiền đang được xử lý qua cổng thanh toán")
                             if (!refundAmountText.isNullOrBlank()) append(", số tiền $refundAmountText đ")
                             append(".")
-                        },
+                        }
+                        "REFUND_FAILED" -> "Hoàn tiền tự động thất bại" to "Khiếu nại $complaintCode: hệ thống không thể hoàn tiền tự động. Vui lòng mở khiếu nại để yêu cầu hoàn tiền thủ công hoặc liên hệ hỗ trợ."
+                        else -> "Cập nhật hoàn tiền khiếu nại" to buildString {
+                            append("Khiếu nại $complaintCode: trạng thái hoàn tiền đã được cập nhật")
+                            if (!refundAmountText.isNullOrBlank()) append(", số tiền $refundAmountText đ")
+                            append(".")
+                        }
+                    }
+                    notificationService.createUserNotification(
+                        userId = complaintUserId,
+                        title = notifTitle,
+                        body = notifBody,
                         type = "REFUND",
                         refId = complaintId
                     )
@@ -558,7 +620,7 @@ class ComplaintService {
         require(complaint[OrderComplaintsTable.status] !in closedComplaintStatuses) {
             "Cannot request refund for a closed complaint"
         }
-        require(complaint[OrderComplaintsTable.refundStatus] == "NONE") {
+        require(complaint[OrderComplaintsTable.refundStatus] in setOf("NONE", "REFUND_FAILED")) {
             "Refund has already been requested or processed"
         }
 
@@ -651,6 +713,11 @@ class ComplaintService {
             .where { ProductsTable.id inList productIds }
             .associate { it[ProductsTable.id] to it[ProductsTable.name] }
 
+        val orderIds = rows.map { it[OrderComplaintsTable.orderId] }.distinct()
+        val orderTotals = if (orderIds.isEmpty()) emptyMap() else OrdersTable.selectAll()
+            .where { OrdersTable.id inList orderIds }
+            .associate { it[OrdersTable.id] to it[OrdersTable.total]?.toDouble() }
+
         return rows.map { row ->
             val id = row[OrderComplaintsTable.id]
             ComplaintDto(
@@ -679,6 +746,7 @@ class ComplaintService {
                 updatedAt = row[OrderComplaintsTable.updatedAt].toString(),
                 resolvedAt = row[OrderComplaintsTable.resolvedAt]?.toString(),
                 closedAt = row[OrderComplaintsTable.closedAt]?.toString(),
+                orderTotal = orderTotals[row[OrderComplaintsTable.orderId]],
                 attachments = attachmentsByComplaintId[id].orEmpty(),
                 messages = messagesByComplaintId[id].orEmpty(),
                 events = eventsByComplaintId[id].orEmpty()
@@ -689,6 +757,8 @@ class ComplaintService {
     private fun markOrderPaymentRefunded(
         orderId: String,
         refundAmount: BigDecimal?,
+        refundMethod: String?,
+        refundTransactionId: String?,
         now: kotlinx.datetime.LocalDateTime
     ) {
         val order = OrdersTable.selectAll()
@@ -704,6 +774,19 @@ class ComplaintService {
         OrdersTable.update({ OrdersTable.id eq orderId }) {
             it[OrdersTable.paymentStatus] = nextPaymentStatus
             it[OrdersTable.updatedAt] = now
+        }
+        if (refundAmount != null && refundAmount > BigDecimal.ZERO) {
+            PaymentsTable.insert {
+                it[PaymentsTable.id] = UUID.randomUUID().toString()
+                it[PaymentsTable.orderId] = orderId
+                it[PaymentsTable.method] = "REFUND"
+                it[PaymentsTable.amount] = refundAmount
+                it[PaymentsTable.transactionId] = refundTransactionId
+                it[PaymentsTable.paymentGatewayResponse] = refundMethod?.let { m -> """{"refundMethod":"$m"}""" }
+                it[PaymentsTable.status] = "COMPLETED"
+                it[PaymentsTable.paidAt] = now
+                it[PaymentsTable.createdAt] = now
+            }
         }
     }
 
@@ -783,6 +866,104 @@ class ComplaintService {
         return raw?.takeIf { it.isNotBlank() }
             ?.let { value -> runCatching { complaintJson.decodeFromString<List<T>>(value) }.getOrDefault(emptyList()) }
             .orEmpty()
+    }
+
+    fun syncSingleComplaintRefund(complaintId: String): Boolean {
+        val row = transaction {
+            OrderComplaintsTable.selectAll()
+                .where { OrderComplaintsTable.id eq complaintId }
+                .singleOrNull()
+        } ?: return false
+        if (row[OrderComplaintsTable.refundStatus] != "REFUND_PROCESSING") return false
+        val mRefundId = row[OrderComplaintsTable.refundTransactionId] ?: return false
+        if (!mRefundId.matches(Regex("\\d{6}_\\d+_.+"))) return false
+        val returnCode = paymentService.queryZaloPayRefundStatus(mRefundId)
+        if (returnCode == 1) {
+            val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            val orderId = row[OrderComplaintsTable.orderId]
+            val shouldRestoreStock = row[OrderComplaintsTable.restoreStock]
+            transaction {
+                OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
+                    it[refundStatus] = "REFUNDED"
+                    it[refundedAt] = now
+                    it[updatedAt] = now
+                }
+                markOrderPaymentRefunded(
+                    orderId = orderId,
+                    refundAmount = row[OrderComplaintsTable.refundAmount],
+                    refundMethod = row[OrderComplaintsTable.refundMethod],
+                    refundTransactionId = mRefundId,
+                    now = now
+                )
+                if (shouldRestoreStock) {
+                    val orderRow = OrdersTable.selectAll().where { OrdersTable.id eq orderId }.singleOrNull()
+                    if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
+                        OrderLifecycleService().restoreStockOnCancel(orderRow)
+                        OrdersTable.update({ OrdersTable.id eq orderId }) {
+                            it[OrdersTable.status] = "RETURNED"
+                            it[OrdersTable.updatedAt] = now
+                        }
+                    }
+                }
+            }
+            return true
+        }
+        return false
+    }
+
+    fun syncZaloPayRefundStatuses() {
+        val paymentService = PaymentService()
+        val processingComplaints = transaction {
+            OrderComplaintsTable.selectAll()
+                .where { OrderComplaintsTable.refundStatus eq "REFUND_PROCESSING" }
+                .toList()
+        }
+        if (processingComplaints.isEmpty()) return
+        println("INFO: Syncing ${processingComplaints.size} REFUND_PROCESSING complaint(s) with ZaloPay")
+        for (row in processingComplaints) {
+            val complaintId = row[OrderComplaintsTable.id]
+            val mRefundId = row[OrderComplaintsTable.refundTransactionId] ?: continue
+            // Only query if it looks like a ZaloPay m_refund_id (yyMMdd_appId_uid format)
+            if (!mRefundId.matches(Regex("\\d{6}_\\d+_.+"))) {
+                println("SKIP: complaint $complaintId has refundTransactionId=$mRefundId (not m_refund_id format)")
+                continue
+            }
+            val returnCode = paymentService.queryZaloPayRefundStatus(mRefundId)
+            if (returnCode == 1) {
+                val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                val refundAmount = row[OrderComplaintsTable.refundAmount]
+                val refundMethod = row[OrderComplaintsTable.refundMethod]
+                val orderId = row[OrderComplaintsTable.orderId]
+                val shouldRestoreStock = row[OrderComplaintsTable.restoreStock]
+                transaction {
+                    OrderComplaintsTable.update({ OrderComplaintsTable.id eq complaintId }) {
+                        it[refundStatus] = "REFUNDED"
+                        it[refundedAt] = now
+                        it[updatedAt] = now
+                    }
+                    markOrderPaymentRefunded(
+                        orderId = orderId,
+                        refundAmount = refundAmount,
+                        refundMethod = refundMethod,
+                        refundTransactionId = mRefundId,
+                        now = now
+                    )
+                    if (shouldRestoreStock) {
+                        val orderRow = OrdersTable.selectAll().where { OrdersTable.id eq orderId }.singleOrNull()
+                        if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
+                            OrderLifecycleService().restoreStockOnCancel(orderRow)
+                            OrdersTable.update({ OrdersTable.id eq orderId }) {
+                                it[OrdersTable.status] = "RETURNED"
+                                it[OrdersTable.updatedAt] = now
+                            }
+                        }
+                    }
+                }
+                println("INFO: Complaint $complaintId updated to REFUNDED via ZaloPay query (m_refund_id=$mRefundId)")
+            } else {
+                println("INFO: Complaint $complaintId still REFUND_PROCESSING (ZaloPay return_code=$returnCode)")
+            }
+        }
     }
 
     private fun calculateDueAt(

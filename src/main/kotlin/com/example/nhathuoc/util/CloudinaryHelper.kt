@@ -26,7 +26,7 @@ object CloudinaryHelper {
         PRODUCT_VIDEO  ("product_videos",  "video", 20 * 1024 * 1024),  // 20 MB (< 10s)
         CERTIFICATE    ("certificates",    "image", 10 * 1024 * 1024),  // 10 MB (ảnh/PDF scan)
         PRESCRIPTION   ("prescriptions",   "image", 10 * 1024 * 1024),  // 10 MB (đơn thuốc scan)
-        AVATAR         ("avatars",         "image", 2 * 1024 * 1024),   // 2 MB
+        AVATAR         ("avatars",         "image", 7 * 1024 * 1024),   // 7 MB
         BANNER         ("banners",         "image", 5 * 1024 * 1024),   // 5 MB
         SUPPLIER_LOGO  ("supplier_logos",  "image", 3 * 1024 * 1024),   // 3 MB
         REWARD_PRODUCT ("reward_products", "image", 5 * 1024 * 1024),   // 5 MB

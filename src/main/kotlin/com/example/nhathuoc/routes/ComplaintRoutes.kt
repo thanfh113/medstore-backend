@@ -219,6 +219,17 @@ fun Route.complaintRoutes() {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
                 }
             }
+
+            post("/{id}/sync-refund") {
+                call.requireInternalAccess()
+                val complaintId = call.parameters["id"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Complaint ID is required"))
+                val synced = complaintService.syncSingleComplaintRefund(complaintId)
+                call.respond(
+                    HttpStatusCode.OK,
+                    mapOf("synced" to synced, "message" to if (synced) "Đã cập nhật trạng thái hoàn tiền" else "Chưa có cập nhật mới")
+                )
+            }
         }
     }
 }

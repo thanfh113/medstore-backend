@@ -259,10 +259,11 @@ class ReviewService {
             "Reason must be one of: ${reportReasons.joinToString(", ")}"
         }
 
-        val reviewExists = ReviewsTable.selectAll()
+        val review = ReviewsTable.selectAll()
             .where { (ReviewsTable.id eq reviewId) and ReviewsTable.deletedAt.isNull() }
-            .count() > 0
-        require(reviewExists) { "Review not found" }
+            .singleOrNull()
+        require(review != null) { "Review not found" }
+        require(review[ReviewsTable.userId] != reporterUserId) { "Không thể báo cáo đánh giá của chính mình" }
 
         val alreadyReported = ReviewReportsTable.selectAll()
             .where {

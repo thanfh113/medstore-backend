@@ -51,6 +51,18 @@ fun Route.rewardRoutes() {
         }
 
         authenticate("auth-jwt") {
+            // GET /api/v1/rewards/products/me - Get reward products with user redemption counts
+            get("/products/me") {
+                try {
+                    val userId = call.principal<JWTPrincipal>()?.getUserId()
+                        ?: return@get call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                    val products = rewardService.getRewardProductsForUser(userId)
+                    call.respond(HttpStatusCode.OK, RouteDataMessageResponse(data = products, message = "OK"))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get reward products: ${e.message}"))
+                }
+            }
+
             // GET /api/v1/rewards - Get user's reward summary
             get {
                 try {

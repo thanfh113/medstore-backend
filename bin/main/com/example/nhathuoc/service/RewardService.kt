@@ -18,6 +18,9 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.not
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.leftJoin
@@ -71,7 +74,9 @@ data class RewardProductDto(
     val stock: Int,
     val isActive: Boolean,
     val sortOrder: Int = 0,
-    val updatedAt: LocalDateTime? = null
+    val updatedAt: LocalDateTime? = null,
+    val usagePerUserLimit: Int? = null,
+    val userRedemptionCount: Int = 0
 )
 
 @Serializable
@@ -91,6 +96,7 @@ data class AdminRewardProductDto(
     val terms: String? = null,
     val priceText: String? = null,
     val sortOrder: Int = 0,
+    val usagePerUserLimit: Int? = null,
     val updatedAt: LocalDateTime? = null
 )
 
@@ -187,7 +193,8 @@ data class AdminRewardProductUpsertRequest(
     val terms: String? = null,
     val priceText: String? = null,
     val isActive: Boolean = true,
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val usagePerUserLimit: Int? = null
 )
 
 class RewardService {
@@ -272,6 +279,7 @@ class RewardService {
 
     fun getRewardProducts(filterByStock: Boolean = true): List<RewardProductDto> = transaction {
         var query = RewardProductsTable
+            .leftJoin(CouponsTable, { RewardProductsTable.couponId }, { CouponsTable.id })
             .selectAll()
             .where { RewardProductsTable.isActive eq true }
 
@@ -281,7 +289,38 @@ class RewardService {
 
         query
             .orderBy(RewardProductsTable.sortOrder to SortOrder.ASC, RewardProductsTable.pointCost to SortOrder.ASC)
-            .map(::toProductDto)
+            .map { toProductDto(it) }
+    }
+
+    fun getRewardProductsForUser(userId: String, filterByStock: Boolean = true): List<RewardProductDto> = transaction {
+        var query = RewardProductsTable
+            .leftJoin(CouponsTable, { RewardProductsTable.couponId }, { CouponsTable.id })
+            .selectAll()
+            .where { RewardProductsTable.isActive eq true }
+
+        if (filterByStock) {
+            query = query.andWhere { RewardProductsTable.stock greater 0 }
+        }
+
+        val rows = query
+            .orderBy(RewardProductsTable.sortOrder to SortOrder.ASC, RewardProductsTable.pointCost to SortOrder.ASC)
+            .toList()
+
+        val productIds = rows.map { it[RewardProductsTable.id] }
+        val redemptionCounts = if (productIds.isNotEmpty()) {
+            RewardRedemptionsTable
+                .selectAll()
+                .where {
+                    (RewardRedemptionsTable.userId eq userId) and
+                    (RewardRedemptionsTable.rewardProductId inList productIds) and
+                    not(RewardRedemptionsTable.status eq "CANCELLED")
+                }
+                .toList()
+                .groupBy { it[RewardRedemptionsTable.rewardProductId] }
+                .mapValues { it.value.size }
+        } else emptyMap()
+
+        rows.map { toProductDto(it, redemptionCounts[it[RewardProductsTable.id]] ?: 0) }
     }
 
     fun redeemReward(userId: String, request: RedeemRewardRequest): RedeemRewardResultDto = transaction {
@@ -312,6 +351,34 @@ class RewardService {
         val account = getOrCreateAccountInTx(userId)
         if (account.availablePoints < totalPointsRequired) {
             throw IllegalArgumentException("Insufficient points. Available: ${account.availablePoints}, Required: $totalPointsRequired")
+        }
+
+        // Enforce per-user redemption limit (ITEM: from product table; VOUCHER: from linked coupon)
+        val perUserLimit: Int? = if (rewardType == "ITEM") {
+            rewardProduct[RewardProductsTable.usagePerUserLimit]
+        } else if (rewardType == "VOUCHER" && couponId != null) {
+            CouponsTable
+                .select(CouponsTable.usagePerUserLimit)
+                .where { CouponsTable.id eq couponId }
+                .singleOrNull()
+                ?.get(CouponsTable.usagePerUserLimit)
+        } else null
+
+        if (perUserLimit != null && perUserLimit > 0) {
+            val existingCount = RewardRedemptionsTable
+                .selectAll()
+                .where {
+                    (RewardRedemptionsTable.userId eq userId) and
+                    (RewardRedemptionsTable.rewardProductId eq request.rewardProductId) and
+                    not(RewardRedemptionsTable.status eq "CANCELLED")
+                }
+                .count()
+
+            if (existingCount >= perUserLimit) {
+                throw IllegalArgumentException(
+                    "Bạn đã đổi quà này rồi. Mỗi người chỉ được đổi $perUserLimit lần"
+                )
+            }
         }
 
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
@@ -470,6 +537,7 @@ class RewardService {
             it[stock] = request.stock
             it[isActive] = request.isActive
             it[sortOrder] = request.sortOrder
+            it[usagePerUserLimit] = if (normalizedType == "ITEM") request.usagePerUserLimit else null
         }
 
         getAdminRewardProductInTx(rewardProductId)
@@ -508,6 +576,7 @@ class RewardService {
             it[stock] = request.stock
             it[isActive] = request.isActive
             it[sortOrder] = request.sortOrder
+            it[usagePerUserLimit] = if (normalizedType == "ITEM") request.usagePerUserLimit else null
             it[updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         }
 
@@ -800,7 +869,7 @@ class RewardService {
         )
     }
 
-    private fun toProductDto(row: ResultRow): RewardProductDto {
+    private fun toProductDto(row: ResultRow, userRedemptionCount: Int = 0): RewardProductDto {
         return RewardProductDto(
             id = row[RewardProductsTable.id],
             name = row[RewardProductsTable.name],
@@ -814,7 +883,10 @@ class RewardService {
             stock = row[RewardProductsTable.stock],
             isActive = row[RewardProductsTable.isActive],
             sortOrder = row[RewardProductsTable.sortOrder],
-            updatedAt = row[RewardProductsTable.updatedAt]
+            updatedAt = row[RewardProductsTable.updatedAt],
+            usagePerUserLimit = row[RewardProductsTable.usagePerUserLimit]
+                ?: row.getOrNull(CouponsTable.usagePerUserLimit),
+            userRedemptionCount = userRedemptionCount
         )
     }
 
@@ -835,6 +907,7 @@ class RewardService {
             terms = row[RewardProductsTable.terms],
             priceText = row[RewardProductsTable.priceText],
             sortOrder = row[RewardProductsTable.sortOrder],
+            usagePerUserLimit = row[RewardProductsTable.usagePerUserLimit],
             updatedAt = row[RewardProductsTable.updatedAt]
         )
     }

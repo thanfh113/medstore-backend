@@ -252,6 +252,40 @@ private data class VNPayQueryResult(
     val rawBody: String
 )
 
+data class RefundResult(
+    val transactionId: String?,
+    val status: String
+)
+
+@Serializable
+private data class MoMoRefundRequest(
+    val partnerCode: String,
+    val orderId: String,
+    val requestId: String,
+    val amount: Long,
+    val transId: Long,
+    val lang: String = "vi",
+    val description: String,
+    val signature: String
+)
+
+@Serializable
+private data class MoMoRefundResponse(
+    val resultCode: Int? = null,
+    val message: String? = null,
+    val transId: Long? = null
+)
+
+@Serializable
+private data class ZaloPayRefundResponse(
+    val return_code: Int? = null,
+    val return_message: String? = null,
+    val sub_return_code: Int? = null,
+    val sub_return_message: String? = null,
+    val refund_id: Long? = null,
+    val m_refund_id: String? = null
+)
+
 class PaymentService {
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
     private val orderLifecycleService = OrderLifecycleService()
@@ -309,6 +343,8 @@ class PaymentService {
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: "MedStore POS"
+    private val momoRefundUrl = resolveMoMoRefundUrl()
+    private val zaloRefundUrl = resolveZaloRefundUrl()
 
     fun initiateVNPayment(userId: String, orderId: String, returnUrl: String): VNPayResponse {
         return transaction {
@@ -521,6 +557,177 @@ class PaymentService {
                 status = "PENDING",
                 qrContent = paymentQrCode
             )
+        }
+    }
+
+    fun refundMoMoPayment(transId: Long, amount: Long, description: String): String {
+        val requestId = UUID.randomUUID().toString()
+        val orderId = "REFUND-${requestId.take(16)}"
+        val signature = generateMoMoRefundSignature(
+            amount = amount,
+            description = description,
+            orderId = orderId,
+            requestId = requestId,
+            transId = transId
+        )
+        val requestBody = json.encodeToString(
+            MoMoRefundRequest(
+                partnerCode = momoPartnerCode,
+                orderId = orderId,
+                requestId = requestId,
+                amount = amount,
+                transId = transId,
+                description = description,
+                signature = signature
+            )
+        )
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(momoRefundUrl))
+            .timeout(Duration.ofSeconds(30))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+            .build()
+        val response = try {
+            gatewayHttpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        } catch (e: Exception) {
+            throw IllegalStateException("MoMo refund gateway unreachable: ${rootCauseMessage(e)}", e)
+        }
+        println("DEBUG: MoMo refund status=${response.statusCode()}, body=${response.body().take(500)}")
+        if (response.statusCode() !in 200..299) {
+            throw IllegalStateException("MoMo refund failed HTTP ${response.statusCode()}: ${response.body().take(300)}")
+        }
+        val refundResponse = json.decodeFromString<MoMoRefundResponse>(response.body())
+        if (refundResponse.resultCode != 0) {
+            throw IllegalStateException("MoMo refund rejected: resultCode=${refundResponse.resultCode}, message=${refundResponse.message}")
+        }
+        return refundResponse.transId?.toString() ?: requestId
+    }
+
+    fun refundZaloPayPayment(zpTransId: Long, amount: Long, description: String): String {
+        val timestamp = System.currentTimeMillis()
+        val dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
+        val uid = "$timestamp${111 + java.util.Random().nextInt(888)}"
+        val mRefundId = "${dateStr}_${zaloAppId}_$uid"
+        val asciiDescription = java.text.Normalizer
+            .normalize(description.replace('đ', 'd').replace('Đ', 'D'), java.text.Normalizer.Form.NFD)
+            .replace(Regex("[^\\p{ASCII}]"), "")
+            .trim()
+            .take(50)
+        // Refund MAC uses key1 (not key2) per ZaloPay official docs
+        val signaturePayload = "$zaloAppId|$zpTransId|$amount|$asciiDescription|$timestamp"
+        val mac = generateZaloSignature(signaturePayload, zaloKey1)
+        println("DEBUG: ZaloPay refund params - mRefundId=$mRefundId, zpTransId=$zpTransId, amount=$amount, desc=$asciiDescription, ts=$timestamp")
+        println("DEBUG: ZaloPay refund signaturePayload=$signaturePayload")
+        val params = linkedMapOf(
+            "app_id" to zaloAppId,
+            "m_refund_id" to mRefundId,
+            "zp_trans_id" to zpTransId.toString(),
+            "amount" to amount.toString(),
+            "description" to asciiDescription,
+            "timestamp" to timestamp.toString(),
+            "mac" to mac
+        )
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(zaloRefundUrl))
+            .timeout(Duration.ofSeconds(30))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(buildFormUrlEncodedBody(params)))
+            .build()
+        val response = try {
+            gatewayHttpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        } catch (e: Exception) {
+            throw IllegalStateException("ZaloPay refund gateway unreachable: ${rootCauseMessage(e)}", e)
+        }
+        println("DEBUG: ZaloPay refund status=${response.statusCode()}, body=${response.body().take(500)}")
+        if (response.statusCode() !in 200..299) {
+            throw IllegalStateException("ZaloPay refund failed HTTP ${response.statusCode()}: ${response.body().take(300)}")
+        }
+        val refundResponse = json.decodeFromString<ZaloPayRefundResponse>(response.body())
+        println("DEBUG: ZaloPay refund response - return_code=${refundResponse.return_code}, refund_id=${refundResponse.refund_id}, m_refund_id=${refundResponse.m_refund_id}")
+        // return_code=1: success, return_code=3: async processing ("đang refund") — both are acceptable
+        if (refundResponse.return_code != 1 && refundResponse.return_code != 3) {
+            throw IllegalStateException(
+                "ZaloPay refund rejected: returnCode=${refundResponse.return_code}, " +
+                "subCode=${refundResponse.sub_return_code}, message=${refundResponse.return_message}, " +
+                "subMessage=${refundResponse.sub_return_message}"
+            )
+        }
+        // Always return the m_refund_id we generated so it can be used to query refund status later
+        return mRefundId
+    }
+
+    fun queryZaloPayRefundStatus(mRefundId: String): Int? {
+        val timestamp = System.currentTimeMillis()
+        val signaturePayload = "$zaloAppId|$mRefundId|$timestamp"
+        val mac = generateZaloSignature(signaturePayload, zaloKey1)
+        val params = linkedMapOf(
+            "app_id" to zaloAppId,
+            "m_refund_id" to mRefundId,
+            "timestamp" to timestamp.toString(),
+            "mac" to mac
+        )
+        val queryUrl = zaloRefundUrl.replace("/refund", "/query_refund")
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(queryUrl))
+            .timeout(Duration.ofSeconds(15))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(buildFormUrlEncodedBody(params)))
+            .build()
+        return try {
+            val response = gatewayHttpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            println("DEBUG: ZaloPay query_refund mRefundId=$mRefundId, status=${response.statusCode()}, body=${response.body().take(300)}")
+            if (response.statusCode() in 200..299) {
+                val body = json.parseToJsonElement(response.body()).jsonObject
+                body["return_code"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+            } else null
+        } catch (e: Exception) {
+            println("WARN: ZaloPay query_refund failed for $mRefundId: ${e.message}")
+            null
+        }
+    }
+
+    fun processComplaintRefund(orderId: String, refundAmount: BigDecimal?): RefundResult? {
+        val amount = refundAmount?.toLong()
+            ?: throw IllegalArgumentException("Refund amount is required for auto-refund")
+        val (paymentMethod, transactionId) = transaction {
+            val payment = PaymentsTable.selectAll()
+                .where { (PaymentsTable.orderId eq orderId) and (PaymentsTable.status eq "COMPLETED") }
+                .orderBy(PaymentsTable.createdAt to SortOrder.DESC)
+                .firstOrNull()
+                ?: return@transaction null to null
+            payment[PaymentsTable.method] to payment[PaymentsTable.transactionId]
+        }
+        if (paymentMethod == null || transactionId == null) {
+            println("INFO: No completed payment found for orderId=$orderId — skipping auto-refund")
+            return null
+        }
+        val description = "Hoàn tiền khiếu nại đơn hàng"
+        return when (paymentMethod.uppercase()) {
+            "MOMO" -> {
+                val transId = transactionId.toLongOrNull()
+                    ?: throw IllegalStateException("Invalid MoMo transId stored: $transactionId")
+                val refundTxnId = refundMoMoPayment(transId, amount, description)
+                RefundResult(transactionId = refundTxnId, status = "REFUNDED")
+            }
+            "ZALOPAY" -> {
+                val zpTransId = transactionId.toLongOrNull()
+                    ?: throw IllegalStateException("Invalid ZaloPay zp_trans_id stored: $transactionId")
+                runCatching { refundZaloPayPayment(zpTransId, amount, description) }
+                    .fold(
+                        onSuccess = { mRefundId ->
+                            // ZaloPay refund is async — gateway accepted but not yet settled
+                            RefundResult(transactionId = mRefundId, status = "REFUND_PROCESSING")
+                        },
+                        onFailure = { e ->
+                            println("WARN: ZaloPay auto-refund failed for zpTransId=$zpTransId, amount=$amount — needs manual processing: ${e.message}")
+                            RefundResult(transactionId = zpTransId.toString(), status = "REFUND_FAILED")
+                        }
+                    )
+            }
+            else -> {
+                println("INFO: Payment method $paymentMethod does not support auto-refund")
+                null
+            }
         }
     }
 
@@ -2589,5 +2796,31 @@ class PaymentService {
     private fun requireEnv(key: String): String {
         return Env.get(key)?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("Missing required environment variable: $key")
+    }
+
+    private fun resolveMoMoRefundUrl(): String = when (paymentEnv) {
+        "production" -> "https://payment.momo.vn/v2/gateway/api/refund"
+        else -> "https://test-payment.momo.vn/v2/gateway/api/refund"
+    }
+
+    private fun resolveZaloRefundUrl(): String = when (paymentEnv) {
+        "production" -> "https://openapi.zalopay.vn/v2/refund"
+        else -> "https://sb-openapi.zalopay.vn/v2/refund"
+    }
+
+    private fun generateMoMoRefundSignature(
+        amount: Long,
+        description: String,
+        orderId: String,
+        requestId: String,
+        transId: Long
+    ): String {
+        val rawData = "accessKey=$momoAccessKey&amount=$amount&description=$description" +
+            "&orderId=$orderId&partnerCode=$momoPartnerCode&requestId=$requestId&transId=$transId"
+        val hmac = Mac.getInstance("HmacSHA256")
+        val keySpec = SecretKeySpec(momoSecretKey.toByteArray(), "HmacSHA256")
+        hmac.init(keySpec)
+        val hash = hmac.doFinal(rawData.toByteArray())
+        return hash.joinToString("") { "%02x".format(it) }
     }
 }

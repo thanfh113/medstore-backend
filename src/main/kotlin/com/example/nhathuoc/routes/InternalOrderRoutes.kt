@@ -397,20 +397,33 @@ fun Route.internalOrderRoutes() {
                             message = "Order not found"
                         )
 
-                    if (newStatus == "CANCELLED" && order[OrdersTable.paymentStatus] == "COMPLETED") {
-                        return@transaction InternalOrderStatusUpdateOutcome.Failure(
-                            statusCode = HttpStatusCode.BadRequest,
-                            message = "Không thể hủy đơn đã thanh toán"
-                        )
+                    val currentStatus = order[OrdersTable.status]
+                    if (newStatus == "CANCELLED") {
+                        if (currentStatus in setOf("SHIPPING", "DELIVERED", "RETURNED")) {
+                            return@transaction InternalOrderStatusUpdateOutcome.Failure(
+                                statusCode = HttpStatusCode.BadRequest,
+                                message = "Không thể hủy đơn đã chuyển giao vận hoặc đã giao"
+                            )
+                        }
+                        if (order[OrdersTable.paymentStatus] == "COMPLETED") {
+                            return@transaction InternalOrderStatusUpdateOutcome.Failure(
+                                statusCode = HttpStatusCode.BadRequest,
+                                message = "Không thể hủy đơn đã thanh toán"
+                            )
+                        }
                     }
 
                     val oldStatus = order[OrdersTable.status]
+                    val oldPaymentStatus = order[OrdersTable.paymentStatus]
                     val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                    val newPaymentStatus = when {
+                        newStatus == "CANCELLED" && oldPaymentStatus != "COMPLETED" -> "UNPAID"
+                        newStatus == "RETURNED" && oldPaymentStatus in setOf("COMPLETED", "PAID") -> "REFUND_PROCESSING"
+                        else -> oldPaymentStatus
+                    }
                     OrdersTable.update({ OrdersTable.id eq orderId }) {
                         it[status] = newStatus
-                        if (newStatus == "CANCELLED" && order[OrdersTable.paymentStatus] != "COMPLETED") {
-                            it[paymentStatus] = "UNPAID"
-                        }
+                        it[paymentStatus] = newPaymentStatus
                         if (newStatus == "DELIVERED" && order[OrdersTable.completedAt] == null) {
                             it[completedAt] = now
                         }
@@ -428,11 +441,7 @@ fun Route.internalOrderRoutes() {
                         orderLifecycleService.notifyOrderStatusChanged(
                             order = order,
                             newStatus = newStatus,
-                            paymentStatus = if (newStatus == "CANCELLED" && order[OrdersTable.paymentStatus] != "COMPLETED") {
-                                "UNPAID"
-                            } else {
-                                order[OrdersTable.paymentStatus]
-                            }
+                            paymentStatus = newPaymentStatus
                         )
                     }
 

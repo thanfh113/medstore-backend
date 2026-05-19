@@ -170,7 +170,7 @@ fun Route.posOrderRoutes() {
                     }
 
                     val customerLookup = request.customerId?.trim()?.ifBlank { null }
-                    val resolvedCustomerId = customerLookup?.let { lookup ->
+                    val resolvedCustomerRow = customerLookup?.let { lookup ->
                         UsersTable
                             .selectAll()
                             .where {
@@ -179,8 +179,11 @@ fun Route.posOrderRoutes() {
                             }
                             .limit(1)
                             .firstOrNull()
-                            ?.get(UsersTable.id)
                     }
+                    val resolvedCustomerId = resolvedCustomerRow?.get(UsersTable.id)
+                    // Store customer phone for matching in mobile POS order history
+                    val resolvedCustomerPhone = resolvedCustomerRow?.get(UsersTable.phone)
+                        ?: customerLookup?.takeIf { it.matches(Regex("\\d{8,12}")) }
 
                     val couponComputed = request.couponCode
                         ?.takeIf { it.isNotBlank() }
@@ -205,6 +208,7 @@ fun Route.posOrderRoutes() {
                         it[OrdersTable.status] = "PENDING"
                         it[OrdersTable.pickupType] = "PICKUP"
                         it[OrdersTable.cashierUserId] = cashierUserId
+                        it[OrdersTable.shippingPhone] = resolvedCustomerPhone
                         it[OrdersTable.subtotal] = subtotal.setScale(2, RoundingMode.HALF_UP)
                         it[OrdersTable.shippingFee] = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                         it[OrdersTable.discount] = discount

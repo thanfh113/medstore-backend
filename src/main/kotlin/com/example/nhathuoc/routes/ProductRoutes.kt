@@ -44,8 +44,6 @@ private data class ProductCertificatePayload(
     val publicId: String? = null,
     val resourceType: String = "image",
     val thumbnailUrl: String? = null,
-    val issueDate: String? = null,
-    val expireDate: String? = null,
     val issuer: String? = null,
     val isActive: Boolean = true
 )
@@ -75,7 +73,6 @@ private data class CreateProductPayload(
     val riskClassification: String = "A",
     val requiresCertification: Boolean = false,
     val requiresConsultation: Boolean = false,
-    val targetAudience: String = "ALL",
     val isActive: Boolean = true,
     val attributes: Map<String, String> = emptyMap(),
     val images: List<ProductImagePayload> = emptyList(),
@@ -107,7 +104,6 @@ private data class UpdateProductPayload(
     val riskClassification: String? = null,
     val requiresCertification: Boolean? = null,
     val requiresConsultation: Boolean? = null,
-    val targetAudience: String? = null,
     val isActive: Boolean? = null,
     val attributes: Map<String, String>? = null,
     val images: List<ProductImagePayload>? = null,
@@ -150,7 +146,6 @@ private data class ProductListItemResponse(
     val riskClassification: String,
     val requiresCertification: Boolean,
     val requiresConsultation: Boolean,
-    val targetAudience: String = "ALL",
     val isActive: Boolean,
     val isFlashSale: Boolean,
     val flashSaleEnd: String? = null,
@@ -170,8 +165,6 @@ private data class ProductCertificateResponse(
     val publicId: String? = null,
     val resourceType: String = "image",
     val thumbnailUrl: String? = null,
-    val issueDate: String? = null,
-    val expireDate: String? = null,
     val issuer: String? = null,
     val isActive: Boolean = true
 )
@@ -264,7 +257,6 @@ private fun ProductDto.toDetailJson(): JsonObject {
         put("riskClassification", riskClassification)
         put("requiresCertification", requiresCertification)
         put("requiresConsultation", requiresConsultation)
-        put("targetAudience", targetAudience)
         put("isActive", isActive)
         put("isFlashSale", isFlashSale)
         put("flashSaleEnd", flashSaleEnd?.toString()?.let(::JsonPrimitive) ?: JsonNull)
@@ -293,8 +285,6 @@ private fun ProductDto.toDetailJson(): JsonObject {
                     put("publicId", certificate.publicId?.let(::JsonPrimitive) ?: JsonNull)
                     put("resourceType", certificate.resourceType)
                     put("thumbnailUrl", certificate.thumbnailUrl?.let(::JsonPrimitive) ?: JsonNull)
-                    put("issueDate", certificate.issueDate?.let(::JsonPrimitive) ?: JsonNull)
-                    put("expireDate", certificate.expireDate?.let(::JsonPrimitive) ?: JsonNull)
                     put("issuer", certificate.issuer?.let(::JsonPrimitive) ?: JsonNull)
                     put("isActive", certificate.isActive)
                 }
@@ -384,8 +374,6 @@ private fun ProductCertificateDto.toAndroidCertificateJson(product: ProductDto):
         put("name", name)
         put("issuer", issuer ?: "")
         put("certificateNumber", type)
-        put("issueDate", issueDate ?: "")
-        put("expiryDate", expireDate?.let(::JsonPrimitive) ?: JsonNull)
         put("documentUrl", deliveryUrl)
         put("fileUrl", deliveryUrl)
         put("fileType", fileType)
@@ -526,7 +514,6 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
         riskClassification = riskClassification,
         requiresCertification = requiresCertification,
         requiresConsultation = requiresConsultation,
-        targetAudience = targetAudience,
         isActive = isActive,
         isFlashSale = isFlashSale,
         flashSaleEnd = flashSaleEnd?.toString(),
@@ -551,8 +538,6 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
                 publicId = it.publicId,
                 resourceType = it.resourceType,
                 thumbnailUrl = it.thumbnailUrl,
-                issueDate = it.issueDate,
-                expireDate = it.expireDate,
                 issuer = it.issuer,
                 isActive = it.isActive
             )
@@ -585,7 +570,6 @@ private fun CreateProductPayload.toServiceRequest(): CreateProductRequest {
         riskClassification = riskClassification,
         requiresCertification = requiresCertification,
         requiresConsultation = requiresConsultation,
-        targetAudience = targetAudience,
         isActive = isActive,
         attributes = attributes,
         images = images.map {
@@ -605,8 +589,6 @@ private fun CreateProductPayload.toServiceRequest(): CreateProductRequest {
                 publicId = it.publicId,
                 resourceType = it.resourceType,
                 thumbnailUrl = it.thumbnailUrl,
-                issueDate = it.issueDate,
-                expireDate = it.expireDate,
                 issuer = it.issuer,
                 isActive = it.isActive
             )
@@ -639,7 +621,6 @@ private fun UpdateProductPayload.toServiceRequest(): UpdateProductRequest {
         riskClassification = riskClassification,
         requiresCertification = requiresCertification,
         requiresConsultation = requiresConsultation,
-        targetAudience = targetAudience,
         isActive = isActive,
         attributes = attributes,
         images = images?.map {
@@ -659,8 +640,6 @@ private fun UpdateProductPayload.toServiceRequest(): UpdateProductRequest {
                 publicId = it.publicId,
                 resourceType = it.resourceType,
                 thumbnailUrl = it.thumbnailUrl,
-                issueDate = it.issueDate,
-                expireDate = it.expireDate,
                 issuer = it.issuer,
                 isActive = it.isActive
             )
