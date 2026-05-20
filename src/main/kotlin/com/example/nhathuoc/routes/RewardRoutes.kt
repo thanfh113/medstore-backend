@@ -296,6 +296,21 @@ fun Route.rewardRoutes() {
                 }
             }
 
+            delete("/products/{id}") {
+                call.requireInternalAccess()
+                val rewardProductId = call.parameters["id"]
+                    ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Reward product ID is required"))
+
+                try {
+                    rewardService.deleteRewardProduct(rewardProductId)
+                    call.respond(HttpStatusCode.OK, mapOf("message" to "Reward product deleted successfully"))
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to e.message))
+                } catch (e: IllegalStateException) {
+                    call.respond(HttpStatusCode.Conflict, mapOf("error" to e.message))
+                }
+            }
+
             get("/redemptions") {
                 call.requireInternalAccess()
                 val status = call.request.queryParameters["status"]

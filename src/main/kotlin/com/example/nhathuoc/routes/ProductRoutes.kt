@@ -71,8 +71,6 @@ private data class CreateProductPayload(
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String? = null,
     val riskClassification: String = "A",
-    val requiresCertification: Boolean = false,
-    val requiresConsultation: Boolean = false,
     val isActive: Boolean = true,
     val attributes: Map<String, String> = emptyMap(),
     val images: List<ProductImagePayload> = emptyList(),
@@ -102,8 +100,6 @@ private data class UpdateProductPayload(
     val productType: String? = null,
     val registrationNumber: String? = null,
     val riskClassification: String? = null,
-    val requiresCertification: Boolean? = null,
-    val requiresConsultation: Boolean? = null,
     val isActive: Boolean? = null,
     val attributes: Map<String, String>? = null,
     val images: List<ProductImagePayload>? = null,
@@ -144,11 +140,7 @@ private data class ProductListItemResponse(
     val productType: String,
     val registrationNumber: String? = null,
     val riskClassification: String,
-    val requiresCertification: Boolean,
-    val requiresConsultation: Boolean,
     val isActive: Boolean,
-    val isFlashSale: Boolean,
-    val flashSaleEnd: String? = null,
     val createdAt: String,
     val updatedAt: String,
     val images: List<ProductImageResponse> = emptyList(),
@@ -255,11 +247,7 @@ private fun ProductDto.toDetailJson(): JsonObject {
         put("productType", productType)
         put("registrationNumber", registrationNumber?.let(::JsonPrimitive) ?: JsonNull)
         put("riskClassification", riskClassification)
-        put("requiresCertification", requiresCertification)
-        put("requiresConsultation", requiresConsultation)
         put("isActive", isActive)
-        put("isFlashSale", isFlashSale)
-        put("flashSaleEnd", flashSaleEnd?.toString()?.let(::JsonPrimitive) ?: JsonNull)
         put("createdAt", createdAt.toString())
         put("updatedAt", updatedAt.toString())
         put("attributes", attributes.toJsonElementSafe())
@@ -352,11 +340,8 @@ private fun ProductDto.toAndroidProductJson(): JsonObject {
         put("productType", productType)
         put("registrationNumber", registrationNumber?.let(::JsonPrimitive) ?: JsonNull)
         put("riskClassification", riskClassification)
-        put("requiresCertification", requiresCertification)
-        put("isPrescription", requiresCertification)
-        put("requiresConsultation", requiresConsultation)
-        put("isFlashSale", isFlashSale)
-        put("flashSaleEnd", flashSaleEnd?.toString()?.let(::JsonPrimitive) ?: JsonNull)
+        put("isFlashSale", effectiveDiscountPct() > 0)
+        put("flashSaleEnd", JsonNull)
         put("isBestSeller", false)
         put("stock", stock)
         put("isActive", isActive)
@@ -512,11 +497,7 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
-        requiresCertification = requiresCertification,
-        requiresConsultation = requiresConsultation,
         isActive = isActive,
-        isFlashSale = isFlashSale,
-        flashSaleEnd = flashSaleEnd?.toString(),
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
         images = images.map {
@@ -568,8 +549,6 @@ private fun CreateProductPayload.toServiceRequest(): CreateProductRequest {
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
-        requiresCertification = requiresCertification,
-        requiresConsultation = requiresConsultation,
         isActive = isActive,
         attributes = attributes,
         images = images.map {
@@ -619,8 +598,6 @@ private fun UpdateProductPayload.toServiceRequest(): UpdateProductRequest {
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
-        requiresCertification = requiresCertification,
-        requiresConsultation = requiresConsultation,
         isActive = isActive,
         attributes = attributes,
         images = images?.map {
@@ -734,16 +711,14 @@ fun Route.productRoutes() {
                 )
                 val products = response.products
                     .filter { it.stock > 0 }
-                    .filter { it.isFlashSale || it.effectiveDiscountPct() > 0 }
+                    .filter { it.effectiveDiscountPct() > 0 }
                     .sortedWith(
-                        compareByDescending<ProductDto> { it.isFlashSale }
-                            .thenByDescending { it.effectiveDiscountPct() }
+                        compareByDescending<ProductDto> { it.effectiveDiscountPct() }
                             .thenByDescending { it.stock }
                     )
                     .take(20)
 
                 val nowIso = Clock.System.now().toString()
-                val endTime = products.firstOrNull()?.flashSaleEnd?.toString() ?: nowIso
                 val responseJson = buildJsonObject {
                     putJsonArray("products") {
                         products.forEach { product ->
@@ -751,7 +726,7 @@ fun Route.productRoutes() {
                         }
                     }
                     put("startTime", nowIso)
-                    put("endTime", endTime)
+                    put("endTime", nowIso)
                     put("timeRemaining", 0)
                 }
 

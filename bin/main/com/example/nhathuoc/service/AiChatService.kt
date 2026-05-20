@@ -68,8 +68,7 @@ private data class AiProductContext(
     val unit: String,
     val price: Double,
     val priceText: String,
-    val stock: Int,
-    val requiresConsultation: Boolean
+    val stock: Int
 )
 
 // ── DTOs returned to client ───────────────────────────────────────────────────
@@ -239,23 +238,6 @@ Quy tắc bắt buộc:
         )
     }
 
-    /* 
-            recommendations = recommendations.map {
-                AiProductRecommendationDto(
-                    productId = it.id,
-                    productName = it.name,
-                    productImage = it.imageUrl,
-                    price = it.price,
-                    productUnit = it.unit,
-                    description = it.shortDescription ?: "",
-                    reason = if (it.requiresConsultation) {
-                        "Sản phẩm phù hợp nhưng nên trao đổi thêm với chuyên viên trước khi dùng."
-                    } else {
-                        "Phù hợp với nhu cầu bạn vừa hỏi và đang còn hàng."
-                    }
-                )
-            }
-            */
 
     // ── Escalate to human consultant ──────────────────────────────────────────
 
@@ -437,7 +419,6 @@ Quy tac goi y san pham:
             product.categoryName?.takeIf { it.isNotBlank() }?.let { parts += "nhom=$it" }
             product.brand?.takeIf { it.isNotBlank() }?.let { parts += "hang=$it" }
             product.shortDescription?.takeIf { it.isNotBlank() }?.let { parts += "mo_ta=${it.take(160)}" }
-            if (product.requiresConsultation) parts += "can_tu_van=true"
             "- ${parts.joinToString("; ")}"
         }
     }
@@ -476,8 +457,7 @@ Quy tac goi y san pham:
                         unit = row[ProductsTable.unit],
                         price = row[ProductsTable.price].toDouble(),
                         priceText = formatPrice(row[ProductsTable.price].toLong()),
-                        stock = row[ProductsTable.stock],
-                        requiresConsultation = row[ProductsTable.requiresConsultation]
+                        stock = row[ProductsTable.stock]
                     )
                 }
         }
@@ -492,7 +472,7 @@ Quy tac goi y san pham:
                         ProductsTable.deletedAt.isNull() and
                         (ProductsTable.stock greater 0)
                 }
-                .orderBy(ProductsTable.isBestSeller to SortOrder.DESC, ProductsTable.isFlashSale to SortOrder.DESC)
+                .orderBy(ProductsTable.discountPct to SortOrder.DESC)
                 .limit(80)
                 .map { row ->
                     AiProductContext(
@@ -511,8 +491,7 @@ Quy tac goi y san pham:
                         unit = row[ProductsTable.unit],
                         price = row[ProductsTable.price].toDouble(),
                         priceText = formatPrice(row[ProductsTable.price].toLong()),
-                        stock = row[ProductsTable.stock],
-                        requiresConsultation = row[ProductsTable.requiresConsultation]
+                        stock = row[ProductsTable.stock]
                     )
                 }
         }
@@ -551,11 +530,7 @@ Quy tac goi y san pham:
             price = price,
             productUnit = unit,
             description = shortDescription ?: "",
-            reason = if (requiresConsultation) {
-                "Sản phẩm phù hợp nhưng nên trao đổi thêm với chuyên viên trước khi dùng."
-            } else {
-                "Phù hợp với nhu cầu bạn vừa hỏi và đang còn hàng."
-            }
+            reason = "Phù hợp với nhu cầu bạn vừa hỏi và đang còn hàng."
         )
     }
 
@@ -566,15 +541,10 @@ Quy tac goi y san pham:
             ?.takeIf { it.isNotBlank() }
             ?.let { "\n- Mô tả ngắn: $it" }
             ?: ""
-        val consultationText = if (product.requiresConsultation) {
-            "\n- Sản phẩm này nên được tư vấn thêm trước khi sử dụng."
-        } else {
-            ""
-        }
         return """
 Bạn đang xem ${product.name}$categoryText.
 - Giá tham khảo: ${product.priceText}/${product.unit}
-- $stockText$descriptionText$consultationText
+- $stockText$descriptionText
 
 Bạn có thể hỏi tôi về công dụng, cách dùng an toàn, lưu ý khi chọn mua hoặc sản phẩm thay thế phù hợp.
         """.trimIndent()

@@ -127,6 +127,7 @@ data class ComplaintDto(
     val resolvedAt: String? = null,
     val closedAt: String? = null,
     val orderTotal: Double? = null,
+    val itemTotal: Double? = null,
     val attachments: List<ComplaintAttachmentDto> = emptyList(),
     val messages: List<ComplaintMessageDto> = emptyList(),
     val events: List<ComplaintEventDto> = emptyList()
@@ -192,14 +193,27 @@ class ComplaintService {
                 .count() > 0
             require(validOrderItem) { "Order item not found" }
         }
-        val existingComplaint = OrderComplaintsTable.selectAll()
-            .where {
-                (OrderComplaintsTable.userId eq userId) and
-                    (OrderComplaintsTable.orderId eq request.orderId)
-            }
-            .count() > 0
+        val existingComplaint = if (orderItemId != null) {
+            // Item-level: one complaint per order item (regardless of who filed it)
+            OrderComplaintsTable.selectAll()
+                .where {
+                    (OrderComplaintsTable.orderId eq request.orderId) and
+                        (OrderComplaintsTable.orderItemId eq orderItemId)
+                }
+                .count() > 0
+        } else {
+            // Whole-order: one whole-order complaint per user per order
+            OrderComplaintsTable.selectAll()
+                .where {
+                    (OrderComplaintsTable.userId eq userId) and
+                        (OrderComplaintsTable.orderId eq request.orderId) and
+                        OrderComplaintsTable.orderItemId.isNull()
+                }
+                .count() > 0
+        }
         require(!existingComplaint) {
-            "Đơn hàng này đã có khiếu nại, không thể tạo thêm"
+            if (orderItemId != null) "Sản phẩm này đã có khiếu nại, không thể tạo thêm"
+            else "Đơn hàng này đã có khiếu nại chung, không thể tạo thêm"
         }
 
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
@@ -401,15 +415,22 @@ class ComplaintService {
             )
         }
         if (request.restoreStock && (isNewlyRefunded || (!isNewlyRefunded && nextStatus == "RESOLVED"))) {
-            val orderRow = OrdersTable.selectAll()
-                .where { OrdersTable.id eq existing[OrderComplaintsTable.orderId] }
-                .singleOrNull()
-            if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
-                OrderLifecycleService().restoreStockOnCancel(orderRow)
-                OrderLifecycleService().revertCouponAndRewardUsage(existing[OrderComplaintsTable.orderId])
-                OrdersTable.update({ OrdersTable.id eq existing[OrderComplaintsTable.orderId] }) {
-                    it[OrdersTable.status] = "RETURNED"
-                    it[OrdersTable.updatedAt] = now
+            val complaintOrderItemId = existing[OrderComplaintsTable.orderItemId]
+            if (complaintOrderItemId != null) {
+                // Item-level: only restore that item's stock, order stays DELIVERED
+                OrderLifecycleService().restoreStockForOrderItem(complaintOrderItemId)
+            } else {
+                // Whole-order: restore all items, mark order as RETURNED, revert coupon/reward
+                val orderRow = OrdersTable.selectAll()
+                    .where { OrdersTable.id eq existing[OrderComplaintsTable.orderId] }
+                    .singleOrNull()
+                if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
+                    OrderLifecycleService().restoreStockOnCancel(orderRow)
+                    OrderLifecycleService().revertCouponAndRewardUsage(existing[OrderComplaintsTable.orderId])
+                    OrdersTable.update({ OrdersTable.id eq existing[OrderComplaintsTable.orderId] }) {
+                        it[OrdersTable.status] = "RETURNED"
+                        it[OrdersTable.updatedAt] = now
+                    }
                 }
             }
         }
@@ -718,6 +739,11 @@ class ComplaintService {
             .where { OrdersTable.id inList orderIds }
             .associate { it[OrdersTable.id] to it[OrdersTable.total]?.toDouble() }
 
+        val orderItemIds = rows.mapNotNull { it[OrderComplaintsTable.orderItemId] }.distinct()
+        val itemTotals = if (orderItemIds.isEmpty()) emptyMap() else OrderItemsTable.selectAll()
+            .where { OrderItemsTable.id inList orderItemIds }
+            .associate { it[OrderItemsTable.id] to (it[OrderItemsTable.price].toDouble() * it[OrderItemsTable.quantity]) }
+
         return rows.map { row ->
             val id = row[OrderComplaintsTable.id]
             ComplaintDto(
@@ -747,6 +773,7 @@ class ComplaintService {
                 resolvedAt = row[OrderComplaintsTable.resolvedAt]?.toString(),
                 closedAt = row[OrderComplaintsTable.closedAt]?.toString(),
                 orderTotal = orderTotals[row[OrderComplaintsTable.orderId]],
+                itemTotal = row[OrderComplaintsTable.orderItemId]?.let { itemTotals[it] },
                 attachments = attachmentsByComplaintId[id].orEmpty(),
                 messages = messagesByComplaintId[id].orEmpty(),
                 events = eventsByComplaintId[id].orEmpty()
@@ -896,12 +923,17 @@ class ComplaintService {
                     now = now
                 )
                 if (shouldRestoreStock) {
-                    val orderRow = OrdersTable.selectAll().where { OrdersTable.id eq orderId }.singleOrNull()
-                    if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
-                        OrderLifecycleService().restoreStockOnCancel(orderRow)
-                        OrdersTable.update({ OrdersTable.id eq orderId }) {
-                            it[OrdersTable.status] = "RETURNED"
-                            it[OrdersTable.updatedAt] = now
+                    val complaintOrderItemId = row[OrderComplaintsTable.orderItemId]
+                    if (complaintOrderItemId != null) {
+                        OrderLifecycleService().restoreStockForOrderItem(complaintOrderItemId)
+                    } else {
+                        val orderRow = OrdersTable.selectAll().where { OrdersTable.id eq orderId }.singleOrNull()
+                        if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
+                            OrderLifecycleService().restoreStockOnCancel(orderRow)
+                            OrdersTable.update({ OrdersTable.id eq orderId }) {
+                                it[OrdersTable.status] = "RETURNED"
+                                it[OrdersTable.updatedAt] = now
+                            }
                         }
                     }
                 }
@@ -949,12 +981,17 @@ class ComplaintService {
                         now = now
                     )
                     if (shouldRestoreStock) {
-                        val orderRow = OrdersTable.selectAll().where { OrdersTable.id eq orderId }.singleOrNull()
-                        if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
-                            OrderLifecycleService().restoreStockOnCancel(orderRow)
-                            OrdersTable.update({ OrdersTable.id eq orderId }) {
-                                it[OrdersTable.status] = "RETURNED"
-                                it[OrdersTable.updatedAt] = now
+                        val complaintOrderItemId = row[OrderComplaintsTable.orderItemId]
+                        if (complaintOrderItemId != null) {
+                            OrderLifecycleService().restoreStockForOrderItem(complaintOrderItemId)
+                        } else {
+                            val orderRow = OrdersTable.selectAll().where { OrdersTable.id eq orderId }.singleOrNull()
+                            if (orderRow != null && orderRow[OrdersTable.status] !in setOf("CANCELLED", "RETURNED")) {
+                                OrderLifecycleService().restoreStockOnCancel(orderRow)
+                                OrdersTable.update({ OrdersTable.id eq orderId }) {
+                                    it[OrdersTable.status] = "RETURNED"
+                                    it[OrdersTable.updatedAt] = now
+                                }
                             }
                         }
                     }

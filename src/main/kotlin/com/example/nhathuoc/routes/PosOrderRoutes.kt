@@ -25,6 +25,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
@@ -271,6 +272,131 @@ fun Route.posOrderRoutes() {
                     )
                 }.onFailure {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to (it.message ?: "Cannot create POS order")))
+                }
+            }
+
+            get("/pending") {
+                call.requireInternalAccess()
+                val orders = transaction {
+                    OrdersTable
+                        .selectAll()
+                        .where {
+                            (OrdersTable.orderChannel eq "POS") and
+                                (OrdersTable.status neq "CANCELLED") and
+                                (OrdersTable.status neq "DELIVERED") and
+                                (OrdersTable.paymentStatus neq "COMPLETED") and
+                                (OrdersTable.paymentStatus neq "CANCELLED")
+                        }
+                        .orderBy(OrdersTable.createdAt to SortOrder.DESC)
+                        .limit(30)
+                        .map { order ->
+                            val latestPayment = PaymentsTable
+                                .selectAll()
+                                .where { PaymentsTable.orderId eq order[OrdersTable.id] }
+                                .orderBy(PaymentsTable.createdAt to SortOrder.DESC)
+                                .limit(1)
+                                .firstOrNull()
+                            PosOrderStatusData(
+                                id = order[OrdersTable.id],
+                                orderCode = order[OrdersTable.orderCode],
+                                status = order[OrdersTable.status],
+                                paymentMethod = order[OrdersTable.paymentMethod],
+                                paymentStatus = order[OrdersTable.paymentStatus],
+                                total = (order[OrdersTable.total] ?: BigDecimal.ZERO).toDouble(),
+                                cashReceived = order[OrdersTable.cashReceived]?.toDouble(),
+                                cashChange = order[OrdersTable.cashChange]?.toDouble(),
+                                paymentReference = latestPayment?.get(PaymentsTable.transactionId),
+                                paidAt = latestPayment?.get(PaymentsTable.paidAt)?.toString()
+                            )
+                        }
+                }
+                call.respond(PosEnvelope(data = orders, message = "Pending POS orders"))
+            }
+
+            post("/{orderId}/cancel") {
+                call.requireInternalAccess()
+                val orderId = call.parameters["orderId"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "orderId is required"))
+
+                val result = transaction {
+                    val order = OrdersTable
+                        .selectAll()
+                        .where { (OrdersTable.id eq orderId) and (OrdersTable.orderChannel eq "POS") }
+                        .singleOrNull()
+                        ?: return@transaction Result.failure<Unit>(IllegalArgumentException("POS order not found"))
+
+                    if (order[OrdersTable.paymentStatus] == "COMPLETED") {
+                        return@transaction Result.failure(IllegalArgumentException("Không thể hủy đơn đã thanh toán"))
+                    }
+
+                    PaymentsTable.update({
+                        (PaymentsTable.orderId eq orderId) and (PaymentsTable.status eq "PENDING")
+                    }) {
+                        it[PaymentsTable.status] = "CANCELLED"
+                    }
+
+                    OrdersTable.update({ OrdersTable.id eq orderId }) {
+                        it[OrdersTable.status] = "CANCELLED"
+                        it[OrdersTable.paymentStatus] = "CANCELLED"
+                    }
+
+                    Result.success(Unit)
+                }
+
+                result.onSuccess {
+                    call.respond(PosEnvelope(data = mapOf("orderId" to orderId), message = "POS order cancelled"))
+                }.onFailure {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (it.message ?: "Cannot cancel POS order")))
+                }
+            }
+
+            post("/{orderId}/switch-to-cash") {
+                call.requireInternalAccess()
+                val orderId = call.parameters["orderId"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "orderId is required"))
+
+                val result = transaction {
+                    val order = OrdersTable
+                        .selectAll()
+                        .where { (OrdersTable.id eq orderId) and (OrdersTable.orderChannel eq "POS") }
+                        .singleOrNull()
+                        ?: return@transaction Result.failure<PosOrderStatusData>(IllegalArgumentException("POS order not found"))
+
+                    if (order[OrdersTable.paymentStatus] == "COMPLETED") {
+                        return@transaction Result.failure(IllegalArgumentException("Đơn đã được thanh toán"))
+                    }
+
+                    PaymentsTable.update({
+                        (PaymentsTable.orderId eq orderId) and (PaymentsTable.status eq "PENDING")
+                    }) {
+                        it[PaymentsTable.status] = "CANCELLED"
+                    }
+
+                    OrdersTable.update({ OrdersTable.id eq orderId }) {
+                        it[OrdersTable.paymentMethod] = "CASH"
+                        it[OrdersTable.paymentStatus] = "UNPAID"
+                    }
+
+                    Result.success(
+                        PosOrderStatusData(
+                            id = orderId,
+                            orderCode = order[OrdersTable.orderCode],
+                            status = order[OrdersTable.status],
+                            paymentMethod = "CASH",
+                            paymentStatus = "UNPAID",
+                            total = (order[OrdersTable.total] ?: BigDecimal.ZERO).toDouble(),
+                            cashReceived = null,
+                            cashChange = null,
+                            paymentReference = null,
+                            paidAt = null
+                        )
+                    )
+                }
+
+                result.onSuccess { data ->
+                    call.respond(PosEnvelope(data = data, message = "POS order switched to CASH"))
+                }.onFailure {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (it.message ?: "Cannot switch POS order to CASH")))
                 }
             }
 

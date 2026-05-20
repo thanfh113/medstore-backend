@@ -129,7 +129,6 @@ fun Route.authRoutes() {
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()
                     it[RefreshTokensTable.userId]    = userId
-                    it[RefreshTokensTable.token]     = ""
                     it[RefreshTokensTable.tokenHash] = hashRefreshToken(refreshToken)
                     it[RefreshTokensTable.expiresAt] = expiresAt
                 }
@@ -200,7 +199,6 @@ fun Route.authRoutes() {
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()
                     it[RefreshTokensTable.userId]    = userId
-                    it[RefreshTokensTable.token]     = ""
                     it[RefreshTokensTable.tokenHash] = hashRefreshToken(newRefresh)
                     it[RefreshTokensTable.expiresAt] = expiresAt
                 }
@@ -242,11 +240,7 @@ fun Route.authRoutes() {
 
             val tokenRow = transaction {
                 RefreshTokensTable.selectAll()
-                    .where {
-                        (RefreshTokensTable.tokenHash eq hashedToken) or
-                        (RefreshTokensTable.token eq hashedToken) or
-                        (RefreshTokensTable.token eq req.refreshToken)
-                    }
+                    .where { RefreshTokensTable.tokenHash eq hashedToken }
                     .firstOrNull()
             } ?: throw BadRequestException("Refresh token khĂ´ng há»£p lá»‡")
 
@@ -286,7 +280,6 @@ fun Route.authRoutes() {
                 RefreshTokensTable.insert {
                     it[RefreshTokensTable.id]        = UUID.randomUUID().toString()
                     it[RefreshTokensTable.userId]    = userId
-                    it[RefreshTokensTable.token]     = ""
                     it[RefreshTokensTable.tokenHash] = hashRefreshToken(newRefresh)
                     it[RefreshTokensTable.expiresAt] = expiresAt
                 }

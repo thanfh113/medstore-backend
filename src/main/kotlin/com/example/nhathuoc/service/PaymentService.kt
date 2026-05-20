@@ -1137,7 +1137,7 @@ class PaymentService {
                     return@transaction Pair(true, "VNPay callback already processed")
                 }
 
-                if (payment[PaymentsTable.status] == "COMPLETED") {
+                if (payment[PaymentsTable.status] != "PENDING") {
                     return@transaction Pair(true, "VNPay callback already processed")
                 }
 
@@ -1201,7 +1201,7 @@ class PaymentService {
                     return@transaction Pair(true, "MoMo callback already processed")
                 }
 
-                if (payment[PaymentsTable.status] == "COMPLETED") {
+                if (payment[PaymentsTable.status] != "PENDING") {
                     return@transaction Pair(true, "MoMo callback already processed")
                 }
 
@@ -1257,11 +1257,17 @@ class PaymentService {
                 }
 
                 if (order[OrdersTable.status] == "CANCELLED") {
+                    return@transaction ZaloPayCallbackAck(2, "order cancelled")
+                }
+
+                if (order[OrdersTable.paymentStatus] == "COMPLETED") {
                     return@transaction ZaloPayCallbackAck(2, "duplicate")
                 }
 
-                if (payment[PaymentsTable.status] == "COMPLETED" || order[OrdersTable.paymentStatus] == "COMPLETED") {
-                    return@transaction ZaloPayCallbackAck(2, "duplicate")
+                if (payment[PaymentsTable.status] == "CANCELLED") {
+                    PaymentsTable.update({ PaymentsTable.id eq payment[PaymentsTable.id] }) {
+                        it[PaymentsTable.status] = "PENDING"
+                    }
                 }
 
                 if (completeSuccessfulOrderPayment(
@@ -1420,7 +1426,7 @@ class PaymentService {
 
             val payment = findLatestPayment(orderId, "MOMO")
                 ?: return@transaction
-            if (payment[PaymentsTable.status] == "COMPLETED") {
+            if (payment[PaymentsTable.status] != "PENDING") {
                 return@transaction
             }
 
@@ -1496,7 +1502,7 @@ class PaymentService {
 
             val payment = findLatestPayment(orderId, "VNPAY")
                 ?: return@transaction
-            if (payment[PaymentsTable.status] == "COMPLETED") {
+            if (payment[PaymentsTable.status] != "PENDING") {
                 return@transaction
             }
 
@@ -1562,7 +1568,7 @@ class PaymentService {
 
             val payment = findLatestPayment(orderId, "ZALOPAY")
                 ?: return@transaction
-            if (payment[PaymentsTable.status] == "COMPLETED") {
+            if (payment[PaymentsTable.status] != "PENDING") {
                 return@transaction
             }
 
@@ -1800,10 +1806,25 @@ class PaymentService {
         }
 
         if (order[OrdersTable.paymentMethod] != method) {
-            throw IllegalArgumentException("POS order payment method does not match requested gateway")
+            val oldMethod = order[OrdersTable.paymentMethod]
+            if (!oldMethod.isNullOrBlank()) {
+                PaymentsTable.update({
+                    (PaymentsTable.orderId eq orderId) and
+                        (PaymentsTable.method eq oldMethod) and
+                        (PaymentsTable.status eq "PENDING")
+                }) {
+                    it[PaymentsTable.status] = "CANCELLED"
+                }
+            }
+            OrdersTable.update({ OrdersTable.id eq orderId }) {
+                it[OrdersTable.paymentMethod] = method
+            }
         }
 
-        return order
+        return OrdersTable
+            .selectAll()
+            .where { OrdersTable.id eq orderId }
+            .single()
     }
 
     private fun upsertPendingPayment(
@@ -2505,7 +2526,7 @@ class PaymentService {
 
             val payment = findLatestPayment(orderId, "MOMO")
                 ?: return@transaction
-            if (payment[PaymentsTable.status] == "COMPLETED") {
+            if (payment[PaymentsTable.status] != "PENDING") {
                 return@transaction
             }
 
@@ -2596,7 +2617,7 @@ class PaymentService {
 
             val payment = findLatestPayment(orderId, "VNPAY")
                 ?: return@transaction
-            if (payment[PaymentsTable.status] == "COMPLETED") {
+            if (payment[PaymentsTable.status] != "PENDING") {
                 return@transaction
             }
 
@@ -2666,7 +2687,7 @@ class PaymentService {
 
             val payment = findLatestPayment(orderId, "ZALOPAY")
                 ?: return@transaction
-            if (payment[PaymentsTable.status] == "COMPLETED") {
+            if (payment[PaymentsTable.status] != "PENDING") {
                 return@transaction
             }
 

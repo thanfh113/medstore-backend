@@ -31,6 +31,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.notInList
+import org.jetbrains.exposed.sql.deleteWhere
 import java.math.BigDecimal
 import java.util.UUID
 
@@ -584,6 +586,25 @@ class RewardService {
             ?: throw IllegalStateException("Cannot load updated reward product")
     }
 
+    fun deleteRewardProduct(rewardProductId: String) = transaction {
+        RewardProductsTable.selectAll()
+            .where { RewardProductsTable.id eq rewardProductId }
+            .singleOrNull()
+            ?: throw IllegalArgumentException("Reward product not found")
+
+        val hasActiveRedemptions = RewardRedemptionsTable.selectAll()
+            .where {
+                (RewardRedemptionsTable.rewardProductId eq rewardProductId) and
+                    (RewardRedemptionsTable.status notInList listOf("CANCELLED", "DELIVERED"))
+            }
+            .any()
+        if (hasActiveRedemptions) {
+            throw IllegalStateException("Không thể xóa vì còn đơn đổi quà đang xử lý")
+        }
+
+        RewardProductsTable.deleteWhere { RewardProductsTable.id eq rewardProductId }
+    }
+
     fun getAvailableVouchers(userId: String): List<RewardVoucherDto> = transaction {
         (RewardRedemptionsTable innerJoin RewardProductsTable innerJoin CouponsTable)
             .selectAll()
@@ -720,22 +741,36 @@ class RewardService {
     }
 
     fun adjustUserPoints(actorUserId: String, request: AdjustRewardPointsRequest): RewardTransactionDto = transaction {
-        require(request.userId.isNotBlank()) { "User ID is required" }
-        require(request.points != 0) { "Adjustment points must not be zero" }
-        require(request.description.isNotBlank()) { "Description is required" }
+        require(request.userId.isNotBlank()) { "Vui lòng nhập SĐT hoặc User ID" }
+        require(request.points != 0) { "Số điểm điều chỉnh không được bằng 0" }
+        require(request.description.isNotBlank()) { "Vui lòng nhập lý do điều chỉnh" }
 
-        val account = getOrCreateAccountInTx(request.userId)
-        val nextTotal = account.totalPoints + request.points
-        require(nextTotal >= account.usedPoints) {
-            "Adjustment would make total points lower than used points"
+        val resolvedUserId = if (request.userId.matches(Regex("^(0|\\+84)\\d{8,10}$"))) {
+            UsersTable.selectAll()
+                .where { UsersTable.phone eq request.userId }
+                .singleOrNull()
+                ?.get(UsersTable.id)
+                ?: throw IllegalArgumentException("Không tìm thấy tài khoản với SĐT ${request.userId}")
+        } else {
+            UsersTable.selectAll()
+                .where { UsersTable.id eq request.userId }
+                .singleOrNull()
+                ?.get(UsersTable.id)
+                ?: throw IllegalArgumentException("Không tìm thấy tài khoản với ID ${request.userId}")
         }
 
-        RewardAccountsTable.update({ RewardAccountsTable.userId eq request.userId }) {
+        val account = getOrCreateAccountInTx(resolvedUserId)
+        val nextTotal = account.totalPoints + request.points
+        require(nextTotal >= account.usedPoints) {
+            "Số điểm sau điều chỉnh (${nextTotal}) thấp hơn điểm đã dùng (${account.usedPoints})"
+        }
+
+        RewardAccountsTable.update({ RewardAccountsTable.userId eq resolvedUserId }) {
             it[totalPoints] = nextTotal
         }
 
         val transactionId = insertTransactionInTx(
-            userId = request.userId,
+            userId = resolvedUserId,
             orderId = null,
             refType = request.refType?.ifBlank { "ADMIN_ADJUSTMENT" },
             refId = request.refId?.ifBlank { null },
@@ -744,6 +779,16 @@ class RewardService {
             description = request.description.trim(),
             createdBy = actorUserId,
             metadata = request.metadata
+        )
+
+        val absPoints = kotlin.math.abs(request.points)
+        notificationService.createUserNotification(
+            userId = resolvedUserId,
+            title = if (request.points > 0) "Bạn được cộng $absPoints điểm thưởng"
+                    else "Điểm thưởng của bạn đã bị trừ $absPoints điểm",
+            body = request.description.trim(),
+            type = "REWARD",
+            refId = transactionId
         )
 
         RewardTransactionsTable.selectAll()

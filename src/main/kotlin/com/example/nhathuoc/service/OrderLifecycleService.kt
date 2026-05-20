@@ -19,6 +19,20 @@ import org.jetbrains.exposed.sql.update
 class OrderLifecycleService(
     private val notificationService: NotificationService = NotificationService()
 ) {
+    fun restoreStockForOrderItem(orderItemId: String): Int {
+        val item = OrderItemsTable.selectAll()
+            .where { OrderItemsTable.id eq orderItemId }
+            .singleOrNull() ?: return 0
+        val productId = item[OrderItemsTable.productId] ?: return 0
+        val quantity = item[OrderItemsTable.quantity]
+        ProductsTable.update({ ProductsTable.id eq productId }) {
+            with(org.jetbrains.exposed.sql.SqlExpressionBuilder) {
+                it.update(ProductsTable.stock, ProductsTable.stock + quantity)
+            }
+        }
+        return quantity
+    }
+
     fun restoreStockOnOnlineCancel(order: ResultRow): Int = restoreStockOnCancel(order)
 
     fun restoreStockOnCancel(order: ResultRow): Int {

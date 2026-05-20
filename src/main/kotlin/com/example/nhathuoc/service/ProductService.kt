@@ -38,11 +38,7 @@ data class ProductDto(
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String?,
     val riskClassification: String,
-    val requiresCertification: Boolean,
-    val requiresConsultation: Boolean,
     val isActive: Boolean,
-    val isFlashSale: Boolean,
-    val flashSaleEnd: LocalDateTime?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val attributes: Map<String, Any> = emptyMap(),
@@ -72,11 +68,7 @@ data class ProductDto(
         "expDate" to expDate?.toString(),
         "registrationNumber" to registrationNumber,
         "riskClassification" to riskClassification,
-        "requiresCertification" to requiresCertification,
-        "requiresConsultation" to requiresConsultation,
         "isActive" to isActive,
-        "isFlashSale" to isFlashSale,
-        "flashSaleEnd" to flashSaleEnd?.toString(),
         "createdAt" to createdAt.toString(),
         "updatedAt" to updatedAt.toString(),
         "attributes" to attributes,
@@ -168,8 +160,6 @@ data class CreateProductRequest(
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String? = null,
     val riskClassification: String = "A",
-    val requiresCertification: Boolean = false,
-    val requiresConsultation: Boolean = false,
     val isActive: Boolean = true,
     val attributes: Map<String, Any> = emptyMap(),
     val images: List<ProductImageInput> = emptyList(),
@@ -199,8 +189,6 @@ data class UpdateProductRequest(
     val productType: String? = null,
     val registrationNumber: String? = null,
     val riskClassification: String?,
-    val requiresCertification: Boolean?,
-    val requiresConsultation: Boolean?,
     val isActive: Boolean?,
     val attributes: Map<String, Any>?,
     val images: List<ProductImageInput>?,
@@ -238,10 +226,6 @@ class ProductService {
             "Risk classification must be one of A, B, C, D"
         }
         return normalized
-    }
-
-    private fun isDirectConsultationOnly(riskClassification: String): Boolean {
-        return riskClassification == "C" || riskClassification == "D"
     }
 
     private fun calculateDiscountPct(originalPrice: BigDecimal?, price: BigDecimal): Int {
@@ -383,7 +367,6 @@ class ProductService {
             val productId = UUID.randomUUID().toString()
             val slug = generateSlug(request.name, productId)
             val riskClassification = normalizeRiskClassification(request.riskClassification)
-            val directConsultationOnly = isDirectConsultationOnly(riskClassification)
             val discountPct = calculateDiscountPct(request.originalPrice, request.price)
 
             // Stock is stored directly on products after simplifying inventory.
@@ -410,8 +393,6 @@ class ProductService {
                 it[ProductsTable.expDate] = request.expDate
                 it[ProductsTable.registrationNumber] = request.registrationNumber
                 it[ProductsTable.riskClassification] = riskClassification
-                it[ProductsTable.requiresCertification] = request.requiresCertification || directConsultationOnly
-                it[ProductsTable.requiresConsultation] = request.requiresConsultation || directConsultationOnly
                 it[ProductsTable.isActive] = request.isActive
             }
 
@@ -441,10 +422,13 @@ class ProductService {
                 .singleOrNull()
                 ?: throw IllegalArgumentException("Product not found")
 
+            val prevRisk = product[ProductsTable.riskClassification]
             val nextRiskClassification = request.riskClassification
                 ?.let(::normalizeRiskClassification)
-                ?: product[ProductsTable.riskClassification]
-            val directConsultationOnly = isDirectConsultationOnly(nextRiskClassification)
+                ?: prevRisk
+
+            val log = org.slf4j.LoggerFactory.getLogger("ProductService")
+            log.info("updateProduct id={} riskClassification: {} -> {}", productId, prevRisk, nextRiskClassification)
             val nextPrice = request.price ?: product[ProductsTable.price]
             val nextOriginalPrice = request.originalPrice ?: product[ProductsTable.originalPrice]
             val nextDiscountPct = calculateDiscountPct(nextOriginalPrice, nextPrice)
@@ -475,25 +459,25 @@ class ProductService {
                 it[ProductsTable.discountPct] = nextDiscountPct
                 request.rewardPoints?.let { value -> it[ProductsTable.rewardPoints] = value }
                 request.registrationNumber?.let { value -> it[ProductsTable.registrationNumber] = value }
-                request.riskClassification?.let { _ -> it[ProductsTable.riskClassification] = nextRiskClassification }
-                if (request.requiresCertification != null || directConsultationOnly) {
-                    it[ProductsTable.requiresCertification] =
-                        (request.requiresCertification ?: product[ProductsTable.requiresCertification]) || directConsultationOnly
-                }
-                if (request.requiresConsultation != null || directConsultationOnly) {
-                    it[ProductsTable.requiresConsultation] =
-                        (request.requiresConsultation ?: product[ProductsTable.requiresConsultation]) || directConsultationOnly
-                }
+                it[ProductsTable.riskClassification] = nextRiskClassification
                 request.isActive?.let { value -> it[ProductsTable.isActive] = value }
                 it[ProductsTable.updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
             }
 
             if (request.images != null) {
-                replaceProductImages(productId, request.images)
+                try {
+                    replaceProductImages(productId, request.images)
+                } catch (e: Exception) {
+                    log.warn("updateProduct id={}: replaceProductImages failed (main update still committed): {}", productId, e.message)
+                }
             }
 
             if (request.certificates != null) {
-                replaceProductCertificates(productId, request.certificates)
+                try {
+                    replaceProductCertificates(productId, request.certificates)
+                } catch (e: Exception) {
+                    log.warn("updateProduct id={}: replaceProductCertificates failed (main update still committed): {}", productId, e.message)
+                }
             }
         }
     }
@@ -623,11 +607,7 @@ class ProductService {
             expDate = row[ProductsTable.expDate],
             registrationNumber = row[ProductsTable.registrationNumber],
             riskClassification = row[ProductsTable.riskClassification],
-            requiresCertification = row[ProductsTable.requiresCertification],
-            requiresConsultation = row[ProductsTable.requiresConsultation],
             isActive = row[ProductsTable.isActive],
-            isFlashSale = row[ProductsTable.isFlashSale],
-            flashSaleEnd = row[ProductsTable.flashSaleEnd],
             createdAt = row[ProductsTable.createdAt],
             updatedAt = row[ProductsTable.updatedAt]
         )

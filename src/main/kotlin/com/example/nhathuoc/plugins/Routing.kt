@@ -39,7 +39,6 @@ fun Application.configureRouting() {
             chatRoutes()
             internalChatRoutes()
             aiChatRoutes()
-            settingsRoutes()
             notificationRoutes()
             bannerRoutes()
             mobileCompatRoutes()

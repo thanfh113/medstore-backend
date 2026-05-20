@@ -185,12 +185,7 @@ class AdminDeleteRequestReviewRegressionTest {
                 it[stock] = 10
                 it[registrationNumber] = null
                 it[riskClassification] = "A"
-                it[requiresCertification] = false
-                it[requiresConsultation] = false
                 it[isActive] = true
-                it[isFlashSale] = false
-                it[isBestSeller] = false
-                it[flashSaleEnd] = null
                 it[createdAt] = now
                 it[updatedAt] = now
             }

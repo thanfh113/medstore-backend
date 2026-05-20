@@ -83,19 +83,14 @@ fun Application.configureDatabase() {
 
 private fun migrateRefreshTokensTable() {
     try {
-        execQuietly("ALTER TABLE refresh_tokens ADD COLUMN token_hash VARCHAR(64) NULL AFTER token")
+        execQuietly("ALTER TABLE refresh_tokens ADD COLUMN token_hash VARCHAR(64) NULL")
     } catch (e: Exception) {
         // Column already exists
     }
     try {
-        execQuietly("ALTER TABLE refresh_tokens ADD COLUMN revoked_at DATETIME NULL AFTER expires_at")
+        execQuietly("ALTER TABLE refresh_tokens ADD COLUMN revoked_at DATETIME NULL")
     } catch (e: Exception) {
         // Column already exists
-    }
-    try {
-        execQuietly("UPDATE refresh_tokens SET token_hash = SHA2(token, 256) WHERE token_hash IS NULL AND token IS NOT NULL AND token <> ''")
-    } catch (e: Exception) {
-        // Update failed, continue anyway
     }
 }
 

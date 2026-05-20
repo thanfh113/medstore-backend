@@ -34,7 +34,6 @@ object UsersTable : Table("users") {
 object RefreshTokensTable : Table("refresh_tokens") {
     val id         = varchar("id", 36)
     val userId     = varchar("user_id", 36).references(UsersTable.id)
-    val token      = text("token") // legacy/raw token column kept for compatibility
     val tokenHash  = varchar("token_hash", 64).nullable()
     val expiresAt  = datetime("expires_at")
     val revokedAt  = datetime("revoked_at").nullable()
@@ -161,12 +160,7 @@ object ProductsTable : Table("products") {
     // Số đăng ký lưu hành (ví dụ: CE Mark, FDA 510(k), ISO 13485)
     val registrationNumber = varchar("registration_number", 100).nullable()
     val riskClassification = varchar("risk_classification", 1).default("A")  // Phân loại A|B|C|D theo TTBYT
-    val requiresCertification = bool("requires_certification").default(false)  // Cần chứng nhận CE/ISO/FDA
-    val requiresConsultation = bool("requires_consultation").default(false)  // Cần tư vấn kỹ thuật trước khi sử dụng
     val isActive           = bool("is_active").default(true)
-    val isFlashSale        = bool("is_flash_sale").default(false)
-    val isBestSeller       = bool("is_best_seller").default(false)
-    val flashSaleEnd       = datetime("flash_sale_end").nullable()
     val createdAt          = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt          = datetime("updated_at").defaultExpression(CurrentDateTime)
     val deletedAt          = datetime("deleted_at").nullable()
