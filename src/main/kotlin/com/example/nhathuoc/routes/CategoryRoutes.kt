@@ -95,21 +95,5 @@ fun Route.categoryRoutes() {
             }
         }
 
-        // Compatibility endpoint. Dynamic attributes were removed from the simplified schema.
-        get("/{categoryId}/attributes") {
-            val categoryId = call.parameters["categoryId"]
-                ?: return@get call.respond(
-                    HttpStatusCode.BadRequest,
-                    mapOf("error" to "Category ID is required")
-                )
-
-            call.respond(
-                HttpStatusCode.OK,
-                mapOf(
-                    "data" to emptyList<Any>(),
-                    "message" to "Dynamic category attributes were removed from this project scope"
-                )
-            )
-        }
     }
 }

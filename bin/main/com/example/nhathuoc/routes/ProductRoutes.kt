@@ -71,6 +71,7 @@ private data class CreateProductPayload(
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String? = null,
     val riskClassification: String = "A",
+    val contactForPrice: Boolean = false,
     val isActive: Boolean = true,
     val attributes: Map<String, String> = emptyMap(),
     val images: List<ProductImagePayload> = emptyList(),
@@ -100,6 +101,7 @@ private data class UpdateProductPayload(
     val productType: String? = null,
     val registrationNumber: String? = null,
     val riskClassification: String? = null,
+    val contactForPrice: Boolean? = null,
     val isActive: Boolean? = null,
     val attributes: Map<String, String>? = null,
     val images: List<ProductImagePayload>? = null,
@@ -140,6 +142,7 @@ private data class ProductListItemResponse(
     val productType: String,
     val registrationNumber: String? = null,
     val riskClassification: String,
+    val contactForPrice: Boolean = false,
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String,
@@ -247,6 +250,7 @@ private fun ProductDto.toDetailJson(): JsonObject {
         put("productType", productType)
         put("registrationNumber", registrationNumber?.let(::JsonPrimitive) ?: JsonNull)
         put("riskClassification", riskClassification)
+        put("contactForPrice", contactForPrice)
         put("isActive", isActive)
         put("createdAt", createdAt.toString())
         put("updatedAt", updatedAt.toString())
@@ -340,6 +344,7 @@ private fun ProductDto.toAndroidProductJson(): JsonObject {
         put("productType", productType)
         put("registrationNumber", registrationNumber?.let(::JsonPrimitive) ?: JsonNull)
         put("riskClassification", riskClassification)
+        put("contactForPrice", contactForPrice)
         put("isFlashSale", effectiveDiscountPct() > 0)
         put("flashSaleEnd", JsonNull)
         put("isBestSeller", false)
@@ -497,6 +502,7 @@ private fun ProductDto.toListItemResponse(): ProductListItemResponse {
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
+        contactForPrice = contactForPrice,
         isActive = isActive,
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
@@ -549,6 +555,7 @@ private fun CreateProductPayload.toServiceRequest(): CreateProductRequest {
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
+        contactForPrice = contactForPrice,
         isActive = isActive,
         attributes = attributes,
         images = images.map {
@@ -598,6 +605,7 @@ private fun UpdateProductPayload.toServiceRequest(): UpdateProductRequest {
         productType = productType,
         registrationNumber = registrationNumber,
         riskClassification = riskClassification,
+        contactForPrice = contactForPrice,
         isActive = isActive,
         attributes = attributes,
         images = images?.map {

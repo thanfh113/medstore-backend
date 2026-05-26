@@ -1,0 +1,788 @@
+2026-05-23 03:41:20.038 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 03:41:20.534 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 03:41:21.621 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 03:41:22.430 [main] INFO  Exposed - Preparing create tables statements took 156ms
+2026-05-23 03:41:22.446 [main] INFO  Exposed - Executing create tables statements took 16ms
+2026-05-23 03:41:22.602 [main] INFO  Exposed - Extracting table columns took 156ms
+2026-05-23 03:41:22.670 [main] INFO  Exposed - Extracting primary keys took 68ms
+2026-05-23 03:41:22.743 [main] INFO  Exposed - Extracting column constraints took 46ms
+2026-05-23 03:41:22.744 [main] INFO  Exposed - Preparing alter table statements took 298ms
+2026-05-23 03:41:23.023 [main] INFO  Exposed - Executing alter table statements took 279ms
+2026-05-23 03:41:23.180 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 03:41:23.181 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 03:41:23.182 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 03:41:23.182 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 03:41:23.182 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 03:41:23.182 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 03:41:23.183 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 03:41:23.183 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 03:41:23.183 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 03:41:23.183 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 03:41:23.184 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 03:41:23.184 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 03:41:23.185 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 03:41:23.186 [main] INFO  Exposed - Checking mapping consistence took 163ms
+2026-05-23 03:41:23.222 [main] INFO  Application - Database connected and tables created.
+2026-05-23 03:41:24.420 [main] INFO  Application - Application started in 4.867 seconds.
+2026-05-23 03:41:24.773 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 03:47:53.264 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 382ms
+2026-05-23 03:47:53.264 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 373ms
+2026-05-23 03:48:11.782 [eventLoopGroupProxy-4-6] INFO  Application - Desktop/Auth login attempt: credential=fctxtt777@gmail.com
+2026-05-23 03:48:12.310 [eventLoopGroupProxy-4-6] INFO  Application - Desktop/Auth login success: userId=46541a6d-1e18-4797-abe9-e0f004499c6f, role=USER
+2026-05-23 03:48:13.235 [eventLoopGroupProxy-4-6] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 1498ms
+2026-05-23 03:48:13.717 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 140ms
+2026-05-23 03:48:13.820 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 243ms
+2026-05-23 03:59:07.068 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 03:59:07.369 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 03:59:08.852 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 03:59:10.453 [main] INFO  Exposed - Preparing create tables statements took 318ms
+2026-05-23 03:59:10.562 [main] INFO  Exposed - Executing create tables statements took 109ms
+2026-05-23 03:59:10.849 [main] INFO  Exposed - Extracting table columns took 287ms
+2026-05-23 03:59:10.926 [main] INFO  Exposed - Extracting primary keys took 77ms
+2026-05-23 03:59:11.022 [main] INFO  Exposed - Extracting column constraints took 51ms
+2026-05-23 03:59:11.022 [main] INFO  Exposed - Preparing alter table statements took 460ms
+2026-05-23 03:59:11.276 [main] INFO  Exposed - Executing alter table statements took 254ms
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 03:59:11.430 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 03:59:11.437 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 03:59:11.437 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 03:59:11.437 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 03:59:11.437 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 03:59:11.437 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 03:59:11.438 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 03:59:11.438 [main] INFO  Exposed - Checking mapping consistence took 162ms
+2026-05-23 03:59:11.480 [main] INFO  Application - Database connected and tables created.
+2026-05-23 03:59:13.619 [main] INFO  Application - Application started in 8.455 seconds.
+2026-05-23 03:59:13.950 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 03:59:16.239 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 1399ms
+2026-05-23 03:59:16.239 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 1399ms
+2026-05-23 03:59:30.541 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/64bb2f65-6b58-48ad-9c22-3df4a7fea52f in 43ms
+2026-05-23 03:59:30.627 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/64bb2f65-6b58-48ad-9c22-3df4a7fea52f/reviews in 32ms
+2026-05-23 04:01:16.577 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/440e67be-e9d0-45dd-ba6b-d7584a499902 in 6ms
+2026-05-23 04:01:16.607 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/440e67be-e9d0-45dd-ba6b-d7584a499902/reviews in 5ms
+2026-05-23 04:04:45.875 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 04:04:46.019 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 04:04:46.534 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 04:04:47.166 [main] INFO  Exposed - Preparing create tables statements took 98ms
+2026-05-23 04:04:47.173 [main] INFO  Exposed - Executing create tables statements took 7ms
+2026-05-23 04:04:47.316 [main] INFO  Exposed - Extracting table columns took 143ms
+2026-05-23 04:04:47.369 [main] INFO  Exposed - Extracting primary keys took 53ms
+2026-05-23 04:04:47.438 [main] INFO  Exposed - Extracting column constraints took 51ms
+2026-05-23 04:04:47.438 [main] INFO  Exposed - Preparing alter table statements took 265ms
+2026-05-23 04:04:47.593 [main] INFO  Exposed - Executing alter table statements took 155ms
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 04:04:47.736 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 04:04:47.736 [main] INFO  Exposed - Checking mapping consistence took 143ms
+2026-05-23 04:04:47.787 [main] INFO  Application - Database connected and tables created.
+2026-05-23 04:04:48.566 [main] INFO  Application - Application started in 3.073 seconds.
+2026-05-23 04:04:48.775 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 04:04:54.012 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 625ms
+2026-05-23 04:04:54.012 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 625ms
+2026-05-23 04:07:57.377 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/8d5dcfcc-839b-47a2-96ac-48e95d6604f3 in 12ms
+2026-05-23 04:07:57.409 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/8d5dcfcc-839b-47a2-96ac-48e95d6604f3/reviews in 16ms
+2026-05-23 04:08:40.650 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/8d5dcfcc-839b-47a2-96ac-48e95d6604f3 in 0ms
+2026-05-23 04:08:40.731 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/8d5dcfcc-839b-47a2-96ac-48e95d6604f3/reviews in 0ms
+2026-05-23 04:09:07.531 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Public products request: category=cat-device, brand=ALL, page=1, limit=20, returned=6
+2026-05-23 04:09:07.531 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products in 19ms
+2026-05-23 04:12:21.767 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 04:12:21.949 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 04:12:22.562 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 04:12:23.149 [main] INFO  Exposed - Preparing create tables statements took 76ms
+2026-05-23 04:12:23.165 [main] INFO  Exposed - Executing create tables statements took 16ms
+2026-05-23 04:12:23.295 [main] INFO  Exposed - Extracting table columns took 127ms
+2026-05-23 04:12:23.363 [main] INFO  Exposed - Extracting primary keys took 68ms
+2026-05-23 04:12:23.447 [main] INFO  Exposed - Extracting column constraints took 52ms
+2026-05-23 04:12:23.447 [main] INFO  Exposed - Preparing alter table statements took 279ms
+2026-05-23 04:12:23.566 [main] INFO  Exposed - Executing alter table statements took 119ms
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 04:12:23.713 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 04:12:23.717 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 04:12:23.717 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 04:12:23.717 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 04:12:23.717 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 04:12:23.717 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 04:12:23.717 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 04:12:23.717 [main] INFO  Exposed - Checking mapping consistence took 151ms
+2026-05-23 04:12:23.758 [main] INFO  Application - Database connected and tables created.
+2026-05-23 04:12:24.765 [main] INFO  Application - Application started in 3.44 seconds.
+2026-05-23 04:12:24.996 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 04:18:37.197 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 04:18:37.370 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 04:18:37.907 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 04:18:38.571 [main] INFO  Exposed - Preparing create tables statements took 91ms
+2026-05-23 04:18:38.590 [main] INFO  Exposed - Executing create tables statements took 17ms
+2026-05-23 04:18:38.744 [main] INFO  Exposed - Extracting table columns took 154ms
+2026-05-23 04:18:38.813 [main] INFO  Exposed - Extracting primary keys took 69ms
+2026-05-23 04:18:38.887 [main] INFO  Exposed - Extracting column constraints took 48ms
+2026-05-23 04:18:38.888 [main] INFO  Exposed - Preparing alter table statements took 298ms
+2026-05-23 04:18:39.008 [main] INFO  Exposed - Executing alter table statements took 120ms
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 04:18:39.153 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 04:18:39.153 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 04:18:39.153 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 04:18:39.153 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 04:18:39.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 04:18:39.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 04:18:39.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 04:18:39.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 04:18:39.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 04:18:39.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 04:18:39.160 [main] INFO  Exposed - Checking mapping consistence took 148ms
+2026-05-23 04:18:39.187 [main] INFO  Application - Database connected and tables created.
+2026-05-23 04:18:40.023 [main] INFO  Application - Application started in 3.198 seconds.
+2026-05-23 04:18:40.271 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 04:30:56.549 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 04:30:56.723 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 04:30:57.214 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 04:30:57.790 [main] INFO  Exposed - Preparing create tables statements took 99ms
+2026-05-23 04:30:57.805 [main] INFO  Exposed - Executing create tables statements took 15ms
+2026-05-23 04:30:57.931 [main] INFO  Exposed - Extracting table columns took 126ms
+2026-05-23 04:30:58.003 [main] INFO  Exposed - Extracting primary keys took 72ms
+2026-05-23 04:30:58.066 [main] INFO  Exposed - Extracting column constraints took 43ms
+2026-05-23 04:30:58.066 [main] INFO  Exposed - Preparing alter table statements took 261ms
+2026-05-23 04:30:58.207 [main] INFO  Exposed - Executing alter table statements took 141ms
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 04:30:58.329 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 04:30:58.345 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 04:30:58.348 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 04:30:58.348 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 04:30:58.348 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 04:30:58.350 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 04:30:58.350 [main] INFO  Exposed - Checking mapping consistence took 143ms
+2026-05-23 04:30:58.378 [main] INFO  Application - Database connected and tables created.
+2026-05-23 04:30:59.089 [main] INFO  Application - Application started in 2.965 seconds.
+2026-05-23 04:30:59.352 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 04:31:02.405 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 318ms
+2026-05-23 04:31:02.405 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 318ms
+2026-05-23 04:49:13.043 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 04:49:13.317 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 04:49:14.190 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 04:49:15.104 [main] INFO  Exposed - Preparing create tables statements took 155ms
+2026-05-23 04:49:15.130 [main] INFO  Exposed - Executing create tables statements took 26ms
+2026-05-23 04:49:15.294 [main] INFO  Exposed - Extracting table columns took 164ms
+2026-05-23 04:49:15.364 [main] INFO  Exposed - Extracting primary keys took 69ms
+2026-05-23 04:49:15.460 [main] INFO  Exposed - Extracting column constraints took 55ms
+2026-05-23 04:49:15.462 [main] INFO  Exposed - Preparing alter table statements took 332ms
+2026-05-23 04:49:15.697 [main] INFO  Exposed - Executing alter table statements took 235ms
+2026-05-23 04:49:15.862 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 04:49:15.865 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 04:49:15.866 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 04:49:15.866 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 04:49:15.867 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 04:49:15.867 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 04:49:15.868 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 04:49:15.868 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 04:49:15.868 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 04:49:15.868 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 04:49:15.868 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 04:49:15.869 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 04:49:15.869 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 04:49:15.869 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 04:49:15.869 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 04:49:15.869 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 04:49:15.870 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 04:49:15.870 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 04:49:15.870 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 04:49:15.870 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 04:49:15.871 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 04:49:15.871 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 04:49:15.872 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 04:49:15.872 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 04:49:15.872 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 04:49:15.872 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 04:49:15.873 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 04:49:15.873 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 04:49:15.873 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 04:49:15.873 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 04:49:15.874 [main] INFO  Exposed - Checking mapping consistence took 177ms
+2026-05-23 04:49:15.938 [main] INFO  Application - Database connected and tables created.
+2026-05-23 04:49:17.086 [main] INFO  Application - Application started in 4.622 seconds.
+2026-05-23 04:49:17.439 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 17:09:05.950 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 17:09:06.208 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 17:09:07.167 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 17:09:08.000 [main] INFO  Exposed - Preparing create tables statements took 104ms
+2026-05-23 17:09:08.028 [main] INFO  Exposed - Executing create tables statements took 28ms
+2026-05-23 17:09:08.204 [main] INFO  Exposed - Extracting table columns took 176ms
+2026-05-23 17:09:08.266 [main] INFO  Exposed - Extracting primary keys took 62ms
+2026-05-23 17:09:08.349 [main] INFO  Exposed - Extracting column constraints took 52ms
+2026-05-23 17:09:08.349 [main] INFO  Exposed - Preparing alter table statements took 321ms
+2026-05-23 17:09:08.475 [main] INFO  Exposed - Executing alter table statements took 126ms
+2026-05-23 17:09:08.626 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 17:09:08.627 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 17:09:08.627 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 17:09:08.628 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 17:09:08.628 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 17:09:08.628 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 17:09:08.628 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 17:09:08.628 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 17:09:08.628 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 17:09:08.629 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 17:09:08.630 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 17:09:08.630 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 17:09:08.630 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 17:09:08.630 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 17:09:08.630 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 17:09:08.631 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 17:09:08.631 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 17:09:08.631 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 17:09:08.631 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 17:09:08.631 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 17:09:08.631 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 17:09:08.632 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 17:09:08.632 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 17:09:08.632 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 17:09:08.632 [main] INFO  Exposed - Checking mapping consistence took 157ms
+2026-05-23 17:09:08.676 [main] INFO  Application - Database connected and tables created.
+2026-05-23 17:09:10.042 [main] INFO  Application - Application started in 4.618 seconds.
+2026-05-23 17:09:10.420 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 17:09:40.563 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 362ms
+2026-05-23 17:09:40.563 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 362ms
+2026-05-23 17:09:54.183 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Auth login attempt: credential=fctxtt777@gmail.com
+2026-05-23 17:09:54.454 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Auth login success: userId=46541a6d-1e18-4797-abe9-e0f004499c6f, role=USER
+2026-05-23 17:09:54.498 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 336ms
+2026-05-23 17:09:54.770 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 109ms
+2026-05-23 17:09:54.788 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 127ms
+2026-05-23 17:15:31.400 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 17:15:31.585 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 17:15:32.333 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 17:15:32.996 [main] INFO  Exposed - Preparing create tables statements took 102ms
+2026-05-23 17:15:33.012 [main] INFO  Exposed - Executing create tables statements took 16ms
+2026-05-23 17:15:33.151 [main] INFO  Exposed - Extracting table columns took 139ms
+2026-05-23 17:15:33.213 [main] INFO  Exposed - Extracting primary keys took 62ms
+2026-05-23 17:15:33.282 [main] INFO  Exposed - Extracting column constraints took 44ms
+2026-05-23 17:15:33.282 [main] INFO  Exposed - Preparing alter table statements took 270ms
+2026-05-23 17:15:33.459 [main] INFO  Exposed - Executing alter table statements took 177ms
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 17:15:33.594 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 17:15:33.594 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 17:15:33.594 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 17:15:33.594 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 17:15:33.594 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 17:15:33.594 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 17:15:33.600 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 17:15:33.600 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 17:15:33.600 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 17:15:33.600 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 17:15:33.600 [main] INFO  Exposed - Checking mapping consistence took 141ms
+2026-05-23 17:15:33.635 [main] INFO  Application - Database connected and tables created.
+2026-05-23 17:15:34.380 [main] INFO  Application - Application started in 3.486 seconds.
+2026-05-23 17:15:34.604 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 17:21:03.074 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 17:21:03.398 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 17:21:04.718 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 17:21:06.037 [main] INFO  Exposed - Preparing create tables statements took 144ms
+2026-05-23 17:21:06.088 [main] INFO  Exposed - Executing create tables statements took 49ms
+2026-05-23 17:21:06.350 [main] INFO  Exposed - Extracting table columns took 260ms
+2026-05-23 17:21:06.460 [main] INFO  Exposed - Extracting primary keys took 108ms
+2026-05-23 17:21:06.610 [main] INFO  Exposed - Extracting column constraints took 102ms
+2026-05-23 17:21:06.612 [main] INFO  Exposed - Preparing alter table statements took 522ms
+2026-05-23 17:21:06.896 [main] INFO  Exposed - Executing alter table statements took 284ms
+2026-05-23 17:21:07.140 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 17:21:07.140 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 17:21:07.140 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 17:21:07.142 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 17:21:07.144 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 17:21:07.144 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 17:21:07.144 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 17:21:07.144 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 17:21:07.144 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 17:21:07.144 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 17:21:07.146 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 17:21:07.146 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 17:21:07.146 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 17:21:07.146 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 17:21:07.146 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 17:21:07.146 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 17:21:07.146 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 17:21:07.146 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 17:21:07.146 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 17:21:07.148 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 17:21:07.148 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 17:21:07.148 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 17:21:07.150 [main] INFO  Exposed - Checking mapping consistence took 254ms
+2026-05-23 17:21:07.212 [main] INFO  Application - Database connected and tables created.
+2026-05-23 17:21:08.813 [main] INFO  Application - Application started in 6.671 seconds.
+2026-05-23 17:21:09.280 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 17:27:30.975 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 17:27:31.157 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 17:27:31.939 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 17:27:32.565 [main] INFO  Exposed - Preparing create tables statements took 78ms
+2026-05-23 17:27:32.583 [main] INFO  Exposed - Executing create tables statements took 18ms
+2026-05-23 17:27:32.717 [main] INFO  Exposed - Extracting table columns took 134ms
+2026-05-23 17:27:32.778 [main] INFO  Exposed - Extracting primary keys took 61ms
+2026-05-23 17:27:32.854 [main] INFO  Exposed - Extracting column constraints took 47ms
+2026-05-23 17:27:32.856 [main] INFO  Exposed - Preparing alter table statements took 273ms
+2026-05-23 17:27:33.017 [main] INFO  Exposed - Executing alter table statements took 161ms
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 17:27:33.157 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 17:27:33.160 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 17:27:33.160 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 17:27:33.160 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 17:27:33.160 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 17:27:33.160 [main] INFO  Exposed - Checking mapping consistence took 143ms
+2026-05-23 17:27:33.193 [main] INFO  Application - Database connected and tables created.
+2026-05-23 17:27:33.952 [main] INFO  Application - Application started in 3.44 seconds.
+2026-05-23 17:27:34.177 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-23 17:30:22.942 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/25764002-3110-41e7-bd9a-115de47cf449 in 247ms
+2026-05-23 17:30:22.942 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/25764002-3110-41e7-bd9a-115de47cf449/reviews in 168ms
+2026-05-23 17:36:50.820 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-23 17:36:50.986 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-23 17:36:51.486 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-23 17:36:52.065 [main] INFO  Exposed - Preparing create tables statements took 88ms
+2026-05-23 17:36:52.080 [main] INFO  Exposed - Executing create tables statements took 15ms
+2026-05-23 17:36:52.225 [main] INFO  Exposed - Extracting table columns took 145ms
+2026-05-23 17:36:52.286 [main] INFO  Exposed - Extracting primary keys took 61ms
+2026-05-23 17:36:52.348 [main] INFO  Exposed - Extracting column constraints took 43ms
+2026-05-23 17:36:52.349 [main] INFO  Exposed - Preparing alter table statements took 269ms
+2026-05-23 17:36:52.468 [main] INFO  Exposed - Executing alter table statements took 119ms
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-23 17:36:52.609 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-23 17:36:52.609 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-23 17:36:52.616 [main] INFO  Exposed - Checking mapping consistence took 146ms
+2026-05-23 17:36:52.651 [main] INFO  Application - Database connected and tables created.
+2026-05-23 17:36:53.326 [main] INFO  Application - Application started in 2.876 seconds.
+2026-05-23 17:36:53.545 [main] INFO  Application - Responding at http://127.0.0.1:8080

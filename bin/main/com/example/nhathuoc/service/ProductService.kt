@@ -38,6 +38,7 @@ data class ProductDto(
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String?,
     val riskClassification: String,
+    val contactForPrice: Boolean = false,
     val isActive: Boolean,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
@@ -68,6 +69,7 @@ data class ProductDto(
         "expDate" to expDate?.toString(),
         "registrationNumber" to registrationNumber,
         "riskClassification" to riskClassification,
+        "contactForPrice" to contactForPrice,
         "isActive" to isActive,
         "createdAt" to createdAt.toString(),
         "updatedAt" to updatedAt.toString(),
@@ -160,6 +162,7 @@ data class CreateProductRequest(
     val productType: String = "MEDICAL_SUPPLY",
     val registrationNumber: String? = null,
     val riskClassification: String = "A",
+    val contactForPrice: Boolean = false,
     val isActive: Boolean = true,
     val attributes: Map<String, Any> = emptyMap(),
     val images: List<ProductImageInput> = emptyList(),
@@ -189,6 +192,7 @@ data class UpdateProductRequest(
     val productType: String? = null,
     val registrationNumber: String? = null,
     val riskClassification: String?,
+    val contactForPrice: Boolean? = null,
     val isActive: Boolean?,
     val attributes: Map<String, Any>?,
     val images: List<ProductImageInput>?,
@@ -393,6 +397,7 @@ class ProductService {
                 it[ProductsTable.expDate] = request.expDate
                 it[ProductsTable.registrationNumber] = request.registrationNumber
                 it[ProductsTable.riskClassification] = riskClassification
+                it[ProductsTable.contactForPrice] = request.contactForPrice
                 it[ProductsTable.isActive] = request.isActive
             }
 
@@ -460,6 +465,7 @@ class ProductService {
                 request.rewardPoints?.let { value -> it[ProductsTable.rewardPoints] = value }
                 request.registrationNumber?.let { value -> it[ProductsTable.registrationNumber] = value }
                 it[ProductsTable.riskClassification] = nextRiskClassification
+                request.contactForPrice?.let { value -> it[ProductsTable.contactForPrice] = value }
                 request.isActive?.let { value -> it[ProductsTable.isActive] = value }
                 it[ProductsTable.updatedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
             }
@@ -607,6 +613,7 @@ class ProductService {
             expDate = row[ProductsTable.expDate],
             registrationNumber = row[ProductsTable.registrationNumber],
             riskClassification = row[ProductsTable.riskClassification],
+            contactForPrice = row[ProductsTable.contactForPrice],
             isActive = row[ProductsTable.isActive],
             createdAt = row[ProductsTable.createdAt],
             updatedAt = row[ProductsTable.updatedAt]

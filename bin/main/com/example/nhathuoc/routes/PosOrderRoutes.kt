@@ -40,7 +40,8 @@ import java.util.UUID
 private data class PosOrderItemRequest(
     val productId: String,
     val quantity: Int,
-    val unit: String? = null
+    val unit: String? = null,
+    val unitPrice: Double? = null
 )
 
 @Serializable
@@ -165,7 +166,11 @@ fun Route.posOrderRoutes() {
                         if (productRow[ProductsTable.stock] < reqItem.quantity) {
                             return@transaction Result.failure(IllegalArgumentException("Insufficient stock for product: ${productRow[ProductsTable.name]}"))
                         }
-                        val lineTotal = productRow[ProductsTable.price].multiply(reqItem.quantity.toBigDecimal())
+                        val effectiveUnitPrice = reqItem.unitPrice
+                            ?.takeIf { it > 0.0 }
+                            ?.let { BigDecimal.valueOf(it) }
+                            ?: productRow[ProductsTable.price]
+                        val lineTotal = effectiveUnitPrice.multiply(reqItem.quantity.toBigDecimal())
                         subtotal = subtotal.add(lineTotal)
                         Triple(productRow, reqItem.quantity, reqItem.unit?.trim()?.ifBlank { null } ?: productRow[ProductsTable.unit])
                     }

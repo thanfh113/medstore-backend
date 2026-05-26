@@ -1,13 +1,11 @@
 package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.CategoriesTable
-import com.example.nhathuoc.database.tables.CategoryAttributesTable
 import com.example.nhathuoc.database.tables.CouponRedemptionsTable
 import com.example.nhathuoc.database.tables.CouponsTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.PaymentsTable
-import com.example.nhathuoc.database.tables.ProductAttributeValuesTable
 import com.example.nhathuoc.database.tables.ProductImagesTable
 import com.example.nhathuoc.database.tables.ProductsTable
 import com.example.nhathuoc.database.tables.RewardRedemptionsTable
@@ -27,8 +25,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
@@ -145,46 +141,6 @@ private data class InternalOrderStatusUpdateResponseDto(
     val data: InternalOrderStatusUpdateDataDto,
     val message: String
 )
-
-private fun ResultRow.toOrderItemAttributeText(): String {
-    return when (this[CategoryAttributesTable.dataType].lowercase()) {
-        "number" -> this[ProductAttributeValuesTable.valueNumber]
-            ?.stripTrailingZeros()
-            ?.toPlainString()
-            .orEmpty()
-
-        "boolean" -> when (this[ProductAttributeValuesTable.valueBool]) {
-            true -> "Có"
-            false -> "Không"
-            null -> ""
-        }
-
-        "date" -> this[ProductAttributeValuesTable.valueDate]?.toString().orEmpty()
-        "multiselect" -> this[ProductAttributeValuesTable.valueJson]
-            ?.replace("[", "")
-            ?.replace("]", "")
-            ?.replace("\"", "")
-            ?.trim()
-            .orEmpty()
-            .ifBlank { this[ProductAttributeValuesTable.valueText].orEmpty() }
-
-        else -> this[ProductAttributeValuesTable.valueText].orEmpty()
-    }
-}
-
-private fun loadOrderItemAttributes(productId: String): Map<String, String> {
-    return ProductAttributeValuesTable
-        .join(CategoryAttributesTable, JoinType.INNER, ProductAttributeValuesTable.attributeId, CategoryAttributesTable.id)
-        .selectAll()
-        .where { ProductAttributeValuesTable.productId eq productId }
-        .orderBy(CategoryAttributesTable.sortOrder to SortOrder.ASC)
-        .mapNotNull { row ->
-            val label = row[CategoryAttributesTable.label].ifBlank { row[CategoryAttributesTable.attrKey] }
-            val value = row.toOrderItemAttributeText().trim()
-            if (value.isBlank()) null else label to value
-        }
-        .toMap()
-}
 
 fun Route.internalOrderRoutes() {
     authenticate("auth-jwt") {

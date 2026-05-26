@@ -20,7 +20,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -61,6 +63,7 @@ private data class AiStoredMessage(
 private data class AiProductContext(
     val id: String,
     val name: String,
+    val categoryId: String?,
     val categoryName: String?,
     val shortDescription: String?,
     val brand: String?,
@@ -70,6 +73,8 @@ private data class AiProductContext(
     val priceText: String,
     val stock: Int
 )
+
+private enum class SearchMode { NORMAL, ALTERNATIVE, CHEAPER, EXPENSIVE, MIDRANGE }
 
 // ── DTOs returned to client ───────────────────────────────────────────────────
 
@@ -133,21 +138,16 @@ class AiChatService {
     private val geminiKey: String? get() = Env.get("API_GEMINI_CHATBOTAI")
 
     private val systemPrompt = """
-Bạn là trợ lý AI tư vấn vật tư y tế của Medstore – nền tảng mua sắm thiết bị và vật tư y tế chuyên nghiệp.
-
-Vai trò của bạn:
-- Tư vấn như một dược sĩ / chuyên viên vật tư y tế có kinh nghiệm
-- Giải thích công dụng, cách sử dụng, lưu ý an toàn của thiết bị và vật tư y tế
-- Gợi ý sản phẩm phù hợp với nhu cầu người dùng
-- Giải thích thuật ngữ y tế một cách dễ hiểu cho người dùng phổ thông
+Bạn là AI tư vấn vật tư y tế của Medstore – ứng dụng di động mua sắm thiết bị và vật tư y tế.
 
 Quy tắc bắt buộc:
-1. Luôn trả lời bằng tiếng Việt, ngắn gọn, rõ ràng và thân thiện
-2. Chỉ tư vấn về vật tư và thiết bị y tế – KHÔNG tư vấn thuốc điều trị bệnh
-3. Nếu câu hỏi liên quan đến chẩn đoán bệnh hoặc cần bác sĩ thăm khám, giải thích giới hạn và khuyên gặp bác sĩ
-4. Nếu câu hỏi về thiết bị chuyên dụng (máy thở, thiết bị phòng mổ, thiết bị cấy ghép), đề xuất kết nối chuyên viên kỹ thuật
-5. Phản hồi tối đa 200 từ để dễ đọc trên điện thoại
-6. Dùng gạch đầu dòng khi cần liệt kê để dễ đọc
+1. Trả lời tiếng Việt, TỐI ĐA 80 TỪ, đi thẳng vào vấn đề, không dài dòng
+2. Không bắt đầu bằng "Chào bạn" hay câu mở đầu thừa ở mỗi tin nhắn
+3. Chỉ tư vấn vật tư/thiết bị y tế – KHÔNG tư vấn thuốc điều trị bệnh
+4. Câu hỏi về chẩn đoán/điều trị → trả lời ngắn 1 câu và khuyên gặp bác sĩ
+5. KHÔNG đề cập đến "trang web", "thanh tìm kiếm", "danh mục" – người dùng đang trong ứng dụng
+6. Khi sản phẩm đã được gợi ý qua card bên dưới → KHÔNG liệt kê lại tên/giá trong text, chỉ nhắc ngắn để người dùng xem card
+7. Dùng gạch đầu dòng khi liệt kê, không viết thành đoạn văn dài
     """.trimIndent()
 
     // ── Create new conversation ───────────────────────────────────────────────
@@ -206,16 +206,89 @@ Quy tắc bắt buộc:
         val historyForGemini = (storedHistory + AiStoredMessage(role = "user", text = userMessage))
             .toGeminiHistory()
 
-        val recommendedProducts = findRelevantProducts(row[AiConversationsTable.productId], userMessage).take(3)
-        val aiReply = callGemini(
-            history = historyForGemini,
-            productId = row[AiConversationsTable.productId],
-            userMessage = userMessage
+        val conversationProductId = row[AiConversationsTable.productId]
+
+        // Use last recommended product as context when conversation has no fixed product
+        val lastRecommendedProductId = storedHistory
+            .lastOrNull { it.role == "ai" && it.recommendations.isNotEmpty() }
+            ?.recommendations?.firstOrNull()?.productId
+        val contextProductId = conversationProductId ?: lastRecommendedProductId
+
+        // Determine search intent
+        val searchMode = when {
+            isAskingForAlternative(userMessage) -> SearchMode.ALTERNATIVE
+            isPriceSearch(userMessage)          -> SearchMode.CHEAPER
+            isExpensiveSearch(userMessage)      -> SearchMode.EXPENSIVE
+            isMidRangeSearch(userMessage)       -> SearchMode.MIDRANGE
+            else                                -> SearchMode.NORMAL
+        }
+
+        // When the query contains explicit product-type keywords (e.g. "nhiệt kế đắt nhất"),
+        // use global keyword+price scoring instead of category-restricted functions.
+        // Category-restricted functions (findCheaper/findMostExpensive) are used only for
+        // bare price queries like "rẻ hơn", "đắt hơn" where user refers to the current product.
+        val priceOnlyTokens = setOf("re", "dat", "nhat", "tot", "hon", "gia")
+        val nonPriceQueryTokens = extractQueryTokens(userMessage) - priceOnlyTokens
+        val hasProductTypeKeywords = nonPriceQueryTokens.isNotEmpty()
+
+        // Route to appropriate product finder; use contextProductId so general-chat follow-ups work
+        val candidates = when {
+            searchMode == SearchMode.ALTERNATIVE && contextProductId != null -> findAlternativeProducts(contextProductId)
+            // Use category-scoped functions only when there are no explicit product keywords
+            searchMode == SearchMode.CHEAPER   && contextProductId != null && !hasProductTypeKeywords -> findCheaperProducts(contextProductId)
+            searchMode == SearchMode.EXPENSIVE && contextProductId != null && !hasProductTypeKeywords -> findMostExpensiveProducts(contextProductId)
+            else -> findRelevantProducts(contextProductId, userMessage, searchMode)
+        }
+
+        // Only push a card when the product truly matches what the user asked for.
+        // For price/alternative searches, always show. For NORMAL keyword searches,
+        // require ALL query tokens to appear in the product (prevents e.g. "bộ test covid"
+        // from showing an HIV test card). When queryTokens is empty (context-only question
+        // like "cách sử dụng"), only show if the top candidate IS the context product.
+        // Quality/attribute words that describe a product feature but never appear in product names.
+        // Remove these before checking whether a product matches the user's query intent.
+        val qualityDescriptors = setOf(
+            "tot", "nhat", "dep", "an", "toan", "hieu",
+            "chinh", "xac",   // chính xác (accurate)
+            "an", "toan",     // an toàn (safe)
+            "moi", "cu"       // new/old
         )
 
-        val recommendations = recommendedProducts.map { product ->
-            product.toRecommendationDto()
+        val queryTokens = if (searchMode == SearchMode.NORMAL) extractQueryTokens(userMessage) else emptySet()
+        val recommendedProducts = candidates.take(1).filter { product ->
+            when {
+                searchMode != SearchMode.NORMAL -> true
+                queryTokens.isEmpty() -> product.id == contextProductId
+                else -> {
+                    val productWords = normalizeForSearch(
+                        listOfNotNull(product.name, product.categoryName, product.brand).joinToString(" ")
+                    ).split(' ').toSet()
+                    // Only require product-type tokens to match (strip out quality adjectives).
+                    // Use 75% match threshold (not 100%) to tolerate minor typos:
+                    // e.g. "nhietj ke hong ngoai" (typo) → 3/4 = 75% → show RT101 card.
+                    // But "test covid" → 1/2 = 50% < 75% → no HIV card.
+                    val productTypeTokens = queryTokens - qualityDescriptors
+                    if (productTypeTokens.isEmpty()) product.id == contextProductId
+                    else {
+                        val matched = productTypeTokens.count { it in productWords }
+                        matched.toDouble() / productTypeTokens.size >= 0.75
+                    }
+                }
+            }
         }
+
+        val geminiReply = callGemini(
+            history = historyForGemini,
+            candidates = candidates.take(12),
+            focusProduct = recommendedProducts.firstOrNull(),
+            searchMode = searchMode
+        )
+        val isError = geminiReply == null
+        val aiReply = geminiReply ?: errorFallback
+
+        // On error: suppress all recommendations so no wrong card is shown and
+        // no wrong product ID is persisted to history (prevents context corruption).
+        val recommendations = if (isError) emptyList() else recommendedProducts.map { it.toRecommendationDto() }
         val updatedHistory = storedHistory +
             AiStoredMessage(role = "user", text = userMessage) +
             AiStoredMessage(role = "ai", text = aiReply, recommendations = recommendations)
@@ -299,6 +372,18 @@ Quy tắc bắt buộc:
         }
     }
 
+    fun deleteConversation(conversationId: String, userId: String) {
+        val row = transaction {
+            AiConversationsTable.selectAll()
+                .where { AiConversationsTable.id eq conversationId }
+                .singleOrNull()
+        } ?: throw NoSuchElementException("Conversation not found")
+        if (row[AiConversationsTable.userId] != userId) throw IllegalAccessException("Not your conversation")
+        transaction {
+            AiConversationsTable.deleteWhere { AiConversationsTable.id eq conversationId }
+        }
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     fun closeConversation(conversationId: String, userId: String): AiConversationDto {
@@ -372,26 +457,95 @@ Quy tắc bắt buộc:
         }
     }
 
-    private suspend fun callGemini(history: List<GeminiContent>, productId: String?, userMessage: String): String {
+    // Returns null when an error occurs so callers can suppress card recommendations on error.
+    private suspend fun callGemini(
+        history: List<GeminiContent>,
+        candidates: List<AiProductContext>,
+        focusProduct: AiProductContext?,
+        searchMode: SearchMode = SearchMode.NORMAL
+    ): String? {
         val key = geminiKey
-        if (key.isNullOrBlank()) return "Xin lỗi, dịch vụ AI tạm thời không khả dụng."
+        if (key.isNullOrBlank()) return null
 
-        // Keep only the last 10 messages to avoid bloating tokens on long conversations
         val trimmedHistory = if (history.size > 10) history.takeLast(10) else history
-        val productContext = buildProductContext(productId, userMessage)
+        val productContext = buildProductContext(candidates)
         val promptWithCatalog = if (productContext.isBlank()) {
-            systemPrompt
+            // No matching products found — explicitly forbid card references
+            systemPrompt + """
+
+Yeu cau trong tin nay: KHONG co san pham nao phu hop trong CSDL va KHONG co CARD nao duoc gui kem.
+- TUYET DOI KHONG viet "xem ben duoi", "xem card", "xem san pham goi y", "ngay ben duoi".
+- Neu user hoi ve san pham da de cap trong cuoc tro chuyen, co the nhac ten nhung khong noi 'xem ben duoi'.
+- Neu user can xem/mua san pham cu the, goi y ket noi chuyen vien hoac mo lai cuoc tro chuyen moi."""
         } else {
+            val focusSection = when {
+                searchMode == SearchMode.ALTERNATIVE && focusProduct != null ->
+                    """
+
+San pham thay the duoc goi y (CARD da hien thi cho user): ${focusProduct.name} - ${focusProduct.priceText}/${focusProduct.unit}${focusProduct.shortDescription?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""}
+Yeu cau: User dang hoi ve san pham tuong tu/khac loai. Hay gioi thieu san pham nay nhu mot lua chon thay the, kem gia va cong dung ngan gon."""
+
+                searchMode == SearchMode.ALTERNATIVE && focusProduct == null ->
+                    """
+
+Yeu cau: User dang hoi co san pham cung loai khac khong. Hien tai KHONG co san pham nao khac cung loai con hang trong CSDL. Hay thong bao ro rang la hien chua co va goi y user ket noi chuyen vien neu can tu van them."""
+
+                searchMode == SearchMode.CHEAPER && focusProduct != null ->
+                    """
+
+San pham gia tot nhat phu hop (CARD da hien thi cho user): ${focusProduct.name} - ${focusProduct.priceText}/${focusProduct.unit}${focusProduct.shortDescription?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""}
+Yeu cau: Gioi thieu san pham gia re nay, nhan manh gia tot. KHONG liet lai ten/gia trong text vi da co card."""
+
+                searchMode == SearchMode.CHEAPER && focusProduct == null ->
+                    """
+
+Yeu cau: Hien khong co san pham gia re hon hoac cung loai trong CSDL. Thong bao ngan gon va goi y ket noi chuyen vien de duoc ho tro them."""
+
+                searchMode == SearchMode.EXPENSIVE && focusProduct != null ->
+                    """
+
+San pham cao cap nhat phu hop (CARD da hien thi cho user): ${focusProduct.name} - ${focusProduct.priceText}/${focusProduct.unit}${focusProduct.shortDescription?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""}
+Yeu cau: Gioi thieu san pham chat luong cao nay, nhan manh do ben va tinh nang. KHONG liet lai ten/gia trong text vi da co card."""
+
+                searchMode == SearchMode.EXPENSIVE && focusProduct == null ->
+                    """
+
+Yeu cau: Hien khong tim duoc san pham chat luong cao phu hop trong CSDL. Thong bao ngan gon."""
+
+                searchMode == SearchMode.MIDRANGE && focusProduct != null ->
+                    """
+
+San pham tam trung phu hop (CARD da hien thi cho user): ${focusProduct.name} - ${focusProduct.priceText}/${focusProduct.unit}${focusProduct.shortDescription?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""}
+Yeu cau: Gioi thieu san pham nay nhu lua chon gia ca phai chang, can doi chat luong va gia. KHONG liet lai ten/gia trong text vi da co card."""
+
+                searchMode == SearchMode.MIDRANGE && focusProduct == null ->
+                    """
+
+Yeu cau: Hien khong tim duoc san pham gia tam trung phu hop trong CSDL. Thong bao ngan gon."""
+
+                focusProduct != null ->
+                    """
+
+San pham duoc goi y chinh (CARD da hien thi cho user): ${focusProduct.name} - ${focusProduct.priceText}/${focusProduct.unit}${focusProduct.shortDescription?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""}
+Yeu cau: Phan hoi cua ban PHAI tap trung vao san pham nay. Neu co de cap san pham khac, chi kem phu de so sanh, khong thay the san pham chinh tren."""
+
+                else ->
+                    """
+
+Yeu cau: KHONG co CARD san pham nao duoc gui kem trong tin nay. Neu muon goi y san pham tu danh sach tren, mo ta ngan gon TEN va GIA truc tiep trong text. TUYET DOI KHONG viet "xem san pham ben duoi", "xem card", "xem goi y ben duoi" vi khong co card nao ca."""
+            }
+
             """
 $systemPrompt
 
 Du lieu san pham dang ban trong CSDL Medstore:
-$productContext
+$productContext$focusSection
 
-Quy tac goi y san pham:
-- Chi goi y san pham co trong danh sach tren, khong tu bia ten san pham.
-- Neu co san pham phu hop, neu toi da 3 san pham kem gia, don vi va ly do ngan gon.
-- Neu khong co san pham phu hop trong danh sach, noi ro hien chua thay san pham phu hop va goi y ket noi chuyen vien.
+Quy tac san pham:
+- Chi duoc nhac ten san pham CO TRONG danh sach tren, tuyet doi khong tu biet ten san pham ngoai danh sach.
+- Neu co CARD (focus section ghi 'CARD da hien thi') → chi noi ngan "Xem san pham goi y ben duoi nhe", khong liet lai ten/gia.
+- Neu KHONG co CARD → mo ta ngan san pham trong text neu can, KHONG de cap den 'ben duoi' hay 'card'.
+- Neu khong co san pham phu hop → noi thang "Hien chua co san pham phu hop, ban co the ket noi chuyen vien de duoc tu van them."
             """.trimIndent()
         }
 
@@ -405,13 +559,12 @@ Quy tac goi y san pham:
         return doGeminiRequest(json.encodeToString(request), key, retryOn429 = true)
     }
 
-    private fun buildProductContext(productId: String?, userMessage: String): String {
-        val ranked = findRelevantProducts(productId, userMessage).take(12)
-        if (ranked.isEmpty()) return ""
+    private val errorFallback = "Xin lỗi, đã xảy ra lỗi kết nối. Bạn có thể kết nối nhân viên tư vấn để được hỗ trợ nhé."
 
-        return ranked.joinToString(separator = "\n") { product ->
+    private fun buildProductContext(candidates: List<AiProductContext>): String {
+        if (candidates.isEmpty()) return ""
+        return candidates.joinToString(separator = "\n") { product ->
             val parts = mutableListOf(
-                "id=${product.id}",
                 "ten=${product.name}",
                 "gia=${product.priceText}/${product.unit}",
                 "ton=${product.stock}"
@@ -434,16 +587,16 @@ Quy tac goi y san pham:
                 }
                 .singleOrNull()
                 ?.let { row ->
-                    val categoryName = row[ProductsTable.categoryId]?.let { categoryId ->
-                        CategoriesTable
-                            .selectAll()
-                            .where { CategoriesTable.id eq categoryId }
-                            .singleOrNull()
-                            ?.get(CategoriesTable.name)
+                    val catId = row[ProductsTable.categoryId]
+                    val categoryName = catId?.let { cid ->
+                        CategoriesTable.selectAll()
+                            .where { CategoriesTable.id eq cid }
+                            .singleOrNull()?.get(CategoriesTable.name)
                     }
                     AiProductContext(
                         id = row[ProductsTable.id],
                         name = row[ProductsTable.name],
+                        categoryId = catId,
                         categoryName = categoryName,
                         shortDescription = row[ProductsTable.shortDescription] ?: row[ProductsTable.description]?.take(140),
                         brand = row[ProductsTable.brand],
@@ -463,7 +616,136 @@ Quy tac goi y san pham:
         }
     }
 
-    private fun findRelevantProducts(productId: String?, userMessage: String): List<AiProductContext> {
+    private fun isPriceSearch(userMessage: String): Boolean {
+        val n = normalizeForSearch(userMessage)
+        val words = n.split(' ').toSet()
+        if ("re" in words) return true
+        return listOf(
+            "re hon", "re nhat", "gia re", "tiet kiem", "gia thap",
+            "gia tot", "re ti", "re chut", "re hon di", "re di",
+            "kinh te hon", "phu hop tui tien", "binh dan"
+        ).any { n.contains(it) }
+    }
+
+    private fun isExpensiveSearch(userMessage: String): Boolean {
+        val n = normalizeForSearch(userMessage)
+        val words = n.split(' ').toSet()
+        if ("dat" in words) return true
+        return listOf(
+            "dat tien", "dat nhat", "hang tot nhat", "chat luong cao",
+            "cao cap", "hang cao cap", "tot nhat", "chat luong nhat",
+            "dat hon", "gia cao", "hang chinh hang cao"
+        ).any { n.contains(it) }
+    }
+
+    private fun isMidRangeSearch(userMessage: String): Boolean {
+        val n = normalizeForSearch(userMessage)
+        return listOf(
+            "vua tien", "tam trung", "phai chang", "hop ly",
+            "tam duoc", "vua phai", "trung binh", "gia vua",
+            "khong qua dat", "gia binh thuong", "gia hop ly"
+        ).any { n.contains(it) }
+    }
+
+    private fun isAskingForAlternative(userMessage: String): Boolean {
+        val n = normalizeForSearch(userMessage)
+        return listOf(
+            "khac", "tuong tu", "thay the", "bien the",
+            "loai nao", "san pham nao khac", "hang khac",
+            "nua khong", "nao nua", "gi nua", "them khong",
+            "con loai", "con cai", "con san pham", "co gi khac",
+            "nua ko", "nua k", "them ko", "them k"
+        ).any { n.contains(it) }
+    }
+
+    private fun findCheaperProducts(currentProductId: String): List<AiProductContext> {
+        val current = findProductById(currentProductId) ?: return emptyList()
+        val catId = current.categoryId ?: return emptyList()
+        return transaction {
+            (ProductsTable leftJoin CategoriesTable)
+                .selectAll()
+                .where {
+                    (ProductsTable.isActive eq true) and
+                        ProductsTable.deletedAt.isNull() and
+                        (ProductsTable.stock greater 0) and
+                        (ProductsTable.id neq currentProductId) and
+                        (ProductsTable.categoryId eq catId)
+                }
+                .orderBy(ProductsTable.price to SortOrder.ASC)
+                .limit(12)
+                .map { row -> rowToProductContext(row, catId) }
+        }
+    }
+
+    private fun findMostExpensiveProducts(currentProductId: String): List<AiProductContext> {
+        val current = findProductById(currentProductId) ?: return emptyList()
+        val catId = current.categoryId ?: return emptyList()
+        return transaction {
+            (ProductsTable leftJoin CategoriesTable)
+                .selectAll()
+                .where {
+                    (ProductsTable.isActive eq true) and
+                        ProductsTable.deletedAt.isNull() and
+                        (ProductsTable.stock greater 0) and
+                        (ProductsTable.id neq currentProductId) and
+                        (ProductsTable.categoryId eq catId)
+                }
+                .orderBy(ProductsTable.price to SortOrder.DESC)
+                .limit(12)
+                .map { row -> rowToProductContext(row, catId) }
+        }
+    }
+
+    private fun findAlternativeProducts(currentProductId: String): List<AiProductContext> {
+        val current = findProductById(currentProductId) ?: return emptyList()
+        val catId = current.categoryId ?: return emptyList()
+        return transaction {
+            (ProductsTable leftJoin CategoriesTable)
+                .selectAll()
+                .where {
+                    (ProductsTable.isActive eq true) and
+                        ProductsTable.deletedAt.isNull() and
+                        (ProductsTable.stock greater 0) and
+                        (ProductsTable.id neq currentProductId) and
+                        (ProductsTable.categoryId eq catId)
+                }
+                .orderBy(ProductsTable.discountPct to SortOrder.DESC)
+                .limit(12)
+                .map { row -> rowToProductContext(row, catId) }
+        }
+    }
+
+    private fun rowToProductContext(
+        row: org.jetbrains.exposed.sql.ResultRow,
+        catId: String
+    ): AiProductContext {
+        val productId = row[ProductsTable.id]
+        return AiProductContext(
+            id = productId,
+            name = row[ProductsTable.name],
+            categoryId = catId,
+            imageUrl = ProductImagesTable
+                .selectAll()
+                .where { ProductImagesTable.productId eq productId }
+                .orderBy(ProductImagesTable.sortOrder to SortOrder.ASC)
+                .limit(1)
+                .singleOrNull()?.get(ProductImagesTable.url),
+            categoryName = row.getOrNull(CategoriesTable.name),
+            shortDescription = row[ProductsTable.shortDescription] ?: row[ProductsTable.description]?.take(140),
+            brand = row[ProductsTable.brand],
+            unit = row[ProductsTable.unit],
+            price = row[ProductsTable.price].toDouble(),
+            priceText = formatPrice(row[ProductsTable.price].toLong()),
+            stock = row[ProductsTable.stock]
+        )
+    }
+
+    private fun findRelevantProducts(
+        contextProductId: String?,
+        userMessage: String,
+        searchMode: SearchMode = SearchMode.NORMAL
+    ): List<AiProductContext> {
+        val productId = contextProductId
         val products = transaction {
             (ProductsTable leftJoin CategoriesTable)
                 .selectAll()
@@ -478,6 +760,7 @@ Quy tac goi y san pham:
                     AiProductContext(
                         id = row[ProductsTable.id],
                         name = row[ProductsTable.name],
+                        categoryId = row[ProductsTable.categoryId],
                         imageUrl = ProductImagesTable
                             .selectAll()
                             .where { ProductImagesTable.productId eq row[ProductsTable.id] }
@@ -497,29 +780,57 @@ Quy tac goi y san pham:
         }
         if (products.isEmpty()) return emptyList()
 
-        val queryTokens = normalizeForSearch(userMessage)
-            .split(' ')
-            .filter { it.length >= 2 }
-            .toSet()
+        val queryTokens = extractQueryTokens(userMessage)
 
-        return products
-            .map { product ->
-                val searchable = normalizeForSearch(
-                    listOfNotNull(product.name, product.categoryName, product.shortDescription, product.brand)
-                        .joinToString(" ")
+        // Dùng word-level matching (không dùng substring) để tránh "co" khớp "cong", "cot"...
+        val scored = products.map { product ->
+            val searchableWords = normalizeForSearch(
+                listOfNotNull(product.name, product.categoryName, product.brand)
+                    .joinToString(" ")
+            ).split(' ').toSet()
+            val keywordScore = queryTokens.count { token -> searchableWords.contains(token) }
+            product to keywordScore
+        }
+
+        val maxKeywordScore = scored.maxOfOrNull { it.second } ?: 0
+
+        // Context bonus: prefer the last-seen product when keyword signals are weak.
+        // maxScore==1 typically means an accidental single-word match (e.g. "su" from "sử dụng"
+        // matching "cao su" in condom name). Give context product a stronger nudge in that case.
+        val contextBonus = when {
+            productId == null    -> 0
+            maxKeywordScore == 0 -> 10  // pure context question, fully rely on last product
+            maxKeywordScore == 1 -> 5   // weak/accidental match, prefer context product
+            else                 -> 0   // strong keyword match, trust keywords
+        }
+
+        val withBonus = scored.map { (product, kw) ->
+            val bonus = if (product.id == productId) contextBonus else 0
+            product to (kw + bonus)
+        }.filter { it.second > 0 }
+
+        // Sort by price when user explicitly asks for price tier
+        return when (searchMode) {
+            SearchMode.CHEAPER   -> withBonus.sortedBy { it.first.price }.map { it.first }
+            SearchMode.EXPENSIVE -> withBonus.sortedByDescending { it.first.price }.map { it.first }
+            SearchMode.MIDRANGE  -> {
+                val sorted = withBonus.sortedBy { it.first.price }
+                if (sorted.isEmpty()) emptyList()
+                else {
+                    val mid = sorted.size / 2
+                    listOf(sorted[mid].first) + sorted.mapIndexedNotNull { i, p -> if (i != mid) p.first else null }
+                }
+            }
+            else -> withBonus
+                .sortedWith(
+                    compareByDescending<Pair<AiProductContext, Int>> { it.second }
+                        // Prefer context product on ties (avoids Vietnamese Unicode sort issues)
+                        .thenByDescending { if (productId != null && it.first.id == productId) 1 else 0 }
+                        // Price ASC as final tiebreaker
+                        .thenBy { it.first.price }
                 )
-                val score = queryTokens.count { token -> searchable.contains(token) } +
-                    if (product.id == productId) 10 else 0
-                product to score
-            }
-            .sortedWith(
-                compareByDescending<Pair<AiProductContext, Int>> { it.second }
-                    .thenBy { it.first.name }
-            )
-            .let { scored ->
-                val matched = scored.filter { it.second > 0 }.map { it.first }
-                if (matched.isNotEmpty()) matched else scored.map { it.first }
-            }
+                .map { it.first }
+        }
     }
 
     private fun AiProductContext.toRecommendationDto(): AiProductRecommendationDto {
@@ -550,8 +861,31 @@ Bạn có thể hỏi tôi về công dụng, cách dùng an toàn, lưu ý khi 
         """.trimIndent()
     }
 
+    private val stopWords = setOf(
+        "co", "khong", "la", "va", "de", "cho", "san", "pham", "loai", "hay",
+        "the", "nay", "gi", "kh", "bi", "thi", "cac", "mot", "nhu", "duoc",
+        "voi", "trong", "khi", "ban", "toi", "se", "da", "cua", "ra", "vao",
+        "len", "xuong", "tu", "den", "sau", "truoc", "tren", "duoi", "cung",
+        "nhung", "ma", "vi", "nen", "neu", "tuy", "dung", "biet", "that",
+        "qua", "rat", "hon", "kia", "do", "ay", "nao", "bao", "noi", "tim",
+        "muon", "can", "bj", "th", "mk", "mn", "ntn", "j", "nha", "bh",
+        // Short function syllables that cause accidental product name matches
+        "su", "cach", "te", "vs", "ok",
+        // Vietnamese counter/generic words that don't distinguish product types
+        "bo", "cai", "chiec", "hop", "goi", "tui", "lo"
+    )
+
+    private fun extractQueryTokens(userMessage: String): Set<String> =
+        normalizeForSearch(userMessage)
+            .split(' ')
+            .filter { it.length >= 2 && it !in stopWords }
+            .toSet()
+
     private fun normalizeForSearch(value: String): String {
-        val withoutMarks = Normalizer.normalize(value.lowercase(), Normalizer.Form.NFD)
+        // 'đ' (U+0111) has no NFD decomposition → must be replaced with 'd' explicitly
+        // before NFD; otherwise "đắt" → " at" (not "dat") and price detection breaks.
+        val withD = value.lowercase().replace('đ', 'd')
+        val withoutMarks = Normalizer.normalize(withD, Normalizer.Form.NFD)
             .replace("\\p{Mn}+".toRegex(), "")
         return withoutMarks.replace("[^a-z0-9\\s]".toRegex(), " ")
             .replace("\\s+".toRegex(), " ")
@@ -562,7 +896,7 @@ Bạn có thể hỏi tôi về công dụng, cách dùng an toàn, lưu ý khi 
         return "%,d VND".format(value).replace(',', '.')
     }
 
-    private suspend fun doGeminiRequest(requestJson: String, key: String, retryOn429: Boolean): String {
+    private suspend fun doGeminiRequest(requestJson: String, key: String, retryOn429: Boolean): String? {
         return try {
             val httpResponse = httpClient.post(
                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$key"
@@ -574,24 +908,22 @@ Bạn có thể hỏi tôi về công dụng, cách dùng an toàn, lưu ý khi 
             when (httpResponse.status.value) {
                 200 -> json.decodeFromString<GeminiResponse>(responseText)
                     .candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                    ?: "Xin lỗi, tôi không thể tạo phản hồi lúc này. Vui lòng thử lại."
+                    ?: null  // empty response → treat as error
                 429 -> {
-                    println("[Gemini] HTTP 429 — rate limited, retryOn429=$retryOn429, body=$responseText")
+                    println("[Gemini] HTTP 429 — rate limited, retryOn429=$retryOn429")
                     if (retryOn429) {
                         delay(5_000)
                         doGeminiRequest(requestJson, key, retryOn429 = false)
-                    } else {
-                        "Xin lỗi, dịch vụ AI đang bận. Vui lòng thử lại sau ít phút."
-                    }
+                    } else null
                 }
                 else -> {
                     println("[Gemini] HTTP ${httpResponse.status.value}: $responseText")
-                    "Xin lỗi, dịch vụ AI tạm thời không khả dụng."
+                    null
                 }
             }
         } catch (e: Exception) {
             println("[Gemini] Exception: ${e.message}")
-            "Xin lỗi, đã xảy ra lỗi kết nối. Vui lòng thử lại sau."
+            null
         }
     }
 }
