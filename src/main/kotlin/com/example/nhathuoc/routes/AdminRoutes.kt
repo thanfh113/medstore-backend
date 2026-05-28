@@ -2,6 +2,7 @@ package com.example.nhathuoc.routes
 
 import com.example.nhathuoc.database.tables.EmployeeProfilesTable
 import com.example.nhathuoc.database.tables.BannersTable
+import com.example.nhathuoc.database.tables.CategoriesTable
 import com.example.nhathuoc.database.tables.OrderItemsTable
 import com.example.nhathuoc.database.tables.OrdersTable
 import com.example.nhathuoc.database.tables.PaymentsTable
@@ -42,6 +43,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.SortOrder
 import java.math.BigDecimal
+import java.time.temporal.IsoFields
 import java.util.UUID
 
 @kotlinx.serialization.Serializable
@@ -53,8 +55,45 @@ private data class TopSellingProductDto(
 )
 
 @kotlinx.serialization.Serializable
+private data class FinanceTimeBreakdownDto(
+    val label: String,
+    val sortKey: String,
+    val grossRevenue: Double,
+    val netProfit: Double,
+    val orderCount: Int,
+    val successfulOrderCount: Int,
+    val quantitySold: Int
+)
+
+@kotlinx.serialization.Serializable
+private data class FinanceCategoryReportDto(
+    val categoryId: String?,
+    val categoryName: String,
+    val stockQuantity: Int,
+    val quantitySold: Int,
+    val revenue: Double,
+    val cost: Double,
+    val netProfit: Double
+)
+
+@kotlinx.serialization.Serializable
+private data class FinanceProductReportDto(
+    val productId: String,
+    val productName: String,
+    val categoryId: String?,
+    val categoryName: String,
+    val stockQuantity: Int,
+    val quantitySold: Int,
+    val revenue: Double,
+    val cost: Double,
+    val netProfit: Double
+)
+
+@kotlinx.serialization.Serializable
 private data class FinanceSummaryDto(
     val shopId: String? = null,
+    val period: String = "ALL",
+    val periodLabel: String = "Tất cả",
     val grossRevenue: Double,
     val onlineRevenue: Double,
     val posRevenue: Double,
@@ -69,8 +108,77 @@ private data class FinanceSummaryDto(
     val refundedOrderCount: Int = 0,
     val returnedOrderCount: Int = 0,
     val totalOrderCount: Int = 0,
-    val topSellingProducts: List<TopSellingProductDto> = emptyList()
+    val topSellingProducts: List<TopSellingProductDto> = emptyList(),
+    val timeBreakdown: List<FinanceTimeBreakdownDto> = emptyList(),
+    val categoryReports: List<FinanceCategoryReportDto> = emptyList(),
+    val productReports: List<FinanceProductReportDto> = emptyList()
 )
+
+private data class ProductFinanceInfo(
+    val id: String,
+    val name: String,
+    val categoryId: String?,
+    val categoryName: String,
+    val stockQuantity: Int,
+    val importPrice: BigDecimal
+)
+
+private data class ProductFinanceAccumulator(
+    val productId: String,
+    val productName: String,
+    val categoryId: String?,
+    val categoryName: String,
+    val stockQuantity: Int,
+    var quantitySold: Int = 0,
+    var revenue: Double = 0.0,
+    var cost: Double = 0.0
+)
+
+private data class FinanceBucketAccumulator(
+    val label: String,
+    val sortKey: String,
+    var grossRevenue: Double = 0.0,
+    var netProfit: Double = 0.0,
+    var orderCount: Int = 0,
+    var successfulOrderCount: Int = 0,
+    var quantitySold: Int = 0
+)
+
+private fun financePeriodLabel(period: String): String = when (period.uppercase()) {
+    "TODAY" -> "Hôm nay"
+    "WEEK" -> "Tuần này"
+    "MONTH" -> "Tháng này"
+    "YEAR" -> "Năm này"
+    else -> "Tất cả"
+}
+
+private fun financeBucketLabel(dateTime: LocalDateTime, period: String): String {
+    val date = dateTime.date
+    return when (period.uppercase()) {
+        "YEAR" -> {
+            val javaDate = java.time.LocalDate.of(date.year, date.monthNumber, date.dayOfMonth)
+            val week = javaDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            val weekYear = javaDate.get(IsoFields.WEEK_BASED_YEAR)
+            "Tuần %02d/%04d".format(week, weekYear)
+        }
+        "ALL" -> "%02d/%04d".format(date.monthNumber, date.year)
+        else -> "%02d/%02d/%04d".format(date.dayOfMonth, date.monthNumber, date.year)
+    }
+}
+
+private fun financeBucketSortKey(dateTime: LocalDateTime, period: String): String {
+    val date = dateTime.date
+    return when (period.uppercase()) {
+        "YEAR" -> {
+            val javaDate = java.time.LocalDate.of(date.year, date.monthNumber, date.dayOfMonth)
+            val week = javaDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+            val weekYear = javaDate.get(IsoFields.WEEK_BASED_YEAR)
+            "%04d-W%02d".format(weekYear, week)
+        }
+        "ALL" -> "%04d-%02d".format(date.year, date.monthNumber)
+        else -> "%04d-%02d-%02d".format(date.year, date.monthNumber, date.dayOfMonth)
+    }
+}
 
 @kotlinx.serialization.Serializable
 private data class AdminEnvelope<T>(
@@ -453,7 +561,7 @@ fun Route.adminRoutes(
             get("/finance") {
                 call.requireRole(AppRoles.ADMIN)
 
-                val period = call.request.queryParameters["period"] ?: "ALL"
+                val period = call.request.queryParameters["period"]?.uppercase() ?: "ALL"
 
                 val summary = transaction {
                     val now = Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Ho_Chi_Minh"))
@@ -477,7 +585,6 @@ fun Route.adminRoutes(
                     }
 
                     val refundedPaymentStatuses = setOf("REFUNDED", "PARTIALLY_REFUNDED")
-                    // Đơn "thành công": không hủy/trả, đã giao hoặc đã thanh toán, chưa bị hoàn tiền toàn phần
                     val successfulOrders = orderRows.filter {
                         val s = it[OrdersTable.status]
                         val ps = it[OrdersTable.paymentStatus]
@@ -494,47 +601,183 @@ fun Route.adminRoutes(
                         .sumOf { it[OrdersTable.total]?.toDouble() ?: 0.0 }
                     val totalDiscount = successfulOrders.sumOf { it[OrdersTable.discount].toDouble() }
 
-                    val successfulOrderIds = successfulOrders.map { it[OrdersTable.id] }.toSet()
-                    val importPrices = ProductsTable
+                    val categoryNames = CategoriesTable
                         .selectAll()
-                        .associate { it[ProductsTable.id] to (it[ProductsTable.importPrice] ?: BigDecimal.ZERO) }
+                        .associate { it[CategoriesTable.id] to it[CategoriesTable.name] }
 
-                    val allOrderItems = OrderItemsTable.selectAll().toList()
-
-                    val soldGoodsCost = allOrderItems
-                        .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
-                        .fold(BigDecimal.ZERO) { total, item ->
-                            val productId = item[OrderItemsTable.productId]
-                            val importPrice = productId?.let { importPrices[it] } ?: BigDecimal.ZERO
-                            total.add(importPrice.multiply(item[OrderItemsTable.quantity].toBigDecimal()))
-                        }
-
-                    val totalExpenses = soldGoodsCost.toDouble()
-
-                    // Tổng tiền đã hoàn trả từ PaymentsTable (method=REFUND, status=COMPLETED)
-                    val allOrderIdsInPeriod = orderRows.map { it[OrdersTable.id] }.toSet()
-                    val totalRefunds = PaymentsTable.selectAll()
-                        .where {
-                            (PaymentsTable.method eq "REFUND") and
-                            (PaymentsTable.status eq "COMPLETED") and
-                            (PaymentsTable.orderId inList allOrderIdsInPeriod)
-                        }
-                        .sumOf { it[PaymentsTable.amount]?.toDouble() ?: 0.0 }
-
-                    val topSellingProducts = allOrderItems
-                        .filter { it[OrderItemsTable.orderId] in successfulOrderIds }
-                        .groupBy { it[OrderItemsTable.productId] ?: "" }
-                        .filter { it.key.isNotEmpty() }
-                        .map { (productId, items) ->
-                            TopSellingProductDto(
-                                productId = productId,
-                                productName = items.first()[OrderItemsTable.name],
-                                quantitySold = items.sumOf { it[OrderItemsTable.quantity] },
-                                revenue = items.sumOf { it[OrderItemsTable.price].toDouble() * it[OrderItemsTable.quantity] }
+                    val productInfos = ProductsTable
+                        .selectAll()
+                        .where { ProductsTable.deletedAt.isNull() }
+                        .associate { row ->
+                            val categoryId = row[ProductsTable.categoryId]
+                            val categoryName = categoryId?.let { categoryNames[it] } ?: "Chưa phân loại"
+                            row[ProductsTable.id] to ProductFinanceInfo(
+                                id = row[ProductsTable.id],
+                                name = row[ProductsTable.name],
+                                categoryId = categoryId,
+                                categoryName = categoryName,
+                                stockQuantity = row[ProductsTable.stock],
+                                importPrice = row[ProductsTable.importPrice] ?: BigDecimal.ZERO
                             )
                         }
-                        .sortedByDescending { it.quantitySold }
+
+                    val allOrderItems = OrderItemsTable.selectAll().toList()
+                    val successfulOrderIds = successfulOrders.map { it[OrdersTable.id] }.toSet()
+                    val successfulItems = allOrderItems.filter { it[OrderItemsTable.orderId] in successfulOrderIds }
+                    val itemsByOrderId = successfulItems.groupBy { it[OrderItemsTable.orderId] }
+
+                    val soldGoodsCost = successfulItems.fold(BigDecimal.ZERO) { total, item ->
+                        val productId = item[OrderItemsTable.productId]
+                        val importPrice = productId?.let { productInfos[it]?.importPrice } ?: BigDecimal.ZERO
+                        total.add(importPrice.multiply(item[OrderItemsTable.quantity].toBigDecimal()))
+                    }
+                    val totalExpenses = soldGoodsCost.toDouble()
+
+                    val allOrderIdsInPeriod = orderRows.map { it[OrdersTable.id] }.toSet()
+                    val refundPayments = if (allOrderIdsInPeriod.isEmpty()) {
+                        emptyList()
+                    } else {
+                        PaymentsTable.selectAll()
+                            .where {
+                                (PaymentsTable.method eq "REFUND") and
+                                (PaymentsTable.status eq "COMPLETED") and
+                                (PaymentsTable.orderId inList allOrderIdsInPeriod)
+                            }
+                            .toList()
+                    }
+                    val totalRefunds = refundPayments.sumOf { it[PaymentsTable.amount]?.toDouble() ?: 0.0 }
+                    val refundsByOrderId = refundPayments.groupBy { it[PaymentsTable.orderId] }
+                        .mapValues { (_, rows) -> rows.sumOf { it[PaymentsTable.amount]?.toDouble() ?: 0.0 } }
+
+                    val productAccumulators = productInfos.values.associate { info ->
+                        info.id to ProductFinanceAccumulator(
+                            productId = info.id,
+                            productName = info.name,
+                            categoryId = info.categoryId,
+                            categoryName = info.categoryName,
+                            stockQuantity = info.stockQuantity
+                        )
+                    }.toMutableMap()
+
+                    successfulItems.forEach { item ->
+                        val productId = item[OrderItemsTable.productId] ?: return@forEach
+                        val info = productInfos[productId]
+                        val quantity = item[OrderItemsTable.quantity]
+                        val revenue = item[OrderItemsTable.price].toDouble() * quantity
+                        val cost = (info?.importPrice ?: BigDecimal.ZERO).multiply(quantity.toBigDecimal()).toDouble()
+                        val accumulator = productAccumulators.getOrPut(productId) {
+                            ProductFinanceAccumulator(
+                                productId = productId,
+                                productName = item[OrderItemsTable.name],
+                                categoryId = info?.categoryId,
+                                categoryName = info?.categoryName ?: "Chưa phân loại",
+                                stockQuantity = info?.stockQuantity ?: 0
+                            )
+                        }
+                        accumulator.quantitySold += quantity
+                        accumulator.revenue += revenue
+                        accumulator.cost += cost
+                    }
+
+                    val productReports = productAccumulators.values
+                        .map {
+                            FinanceProductReportDto(
+                                productId = it.productId,
+                                productName = it.productName,
+                                categoryId = it.categoryId,
+                                categoryName = it.categoryName,
+                                stockQuantity = it.stockQuantity,
+                                quantitySold = it.quantitySold,
+                                revenue = it.revenue,
+                                cost = it.cost,
+                                netProfit = it.revenue - it.cost
+                            )
+                        }
+                        .sortedWith(
+                            compareByDescending<FinanceProductReportDto> { it.quantitySold }
+                                .thenByDescending { it.revenue }
+                                .thenBy { it.productName }
+                        )
+
+                    val categoryReports = productReports
+                        .groupBy { it.categoryId ?: "" }
+                        .map { (_, products) ->
+                            val first = products.first()
+                            FinanceCategoryReportDto(
+                                categoryId = first.categoryId,
+                                categoryName = first.categoryName,
+                                stockQuantity = products.sumOf { it.stockQuantity },
+                                quantitySold = products.sumOf { it.quantitySold },
+                                revenue = products.sumOf { it.revenue },
+                                cost = products.sumOf { it.cost },
+                                netProfit = products.sumOf { it.netProfit }
+                            )
+                        }
+                        .sortedWith(
+                            compareByDescending<FinanceCategoryReportDto> { it.revenue }
+                                .thenBy { it.categoryName }
+                        )
+
+                    val topSellingProducts = productReports
+                        .filter { it.quantitySold > 0 }
                         .take(10)
+                        .map {
+                            TopSellingProductDto(
+                                productId = it.productId,
+                                productName = it.productName,
+                                quantitySold = it.quantitySold,
+                                revenue = it.revenue
+                            )
+                        }
+
+                    val buckets = linkedMapOf<String, FinanceBucketAccumulator>()
+                    orderRows.forEach { order ->
+                        val createdAt = order[OrdersTable.createdAt]
+                        val sortKey = financeBucketSortKey(createdAt, period)
+                        val bucket = buckets.getOrPut(sortKey) {
+                            FinanceBucketAccumulator(
+                                label = financeBucketLabel(createdAt, period),
+                                sortKey = sortKey
+                            )
+                        }
+                        bucket.orderCount += 1
+                    }
+                    successfulOrders.forEach { order ->
+                        val orderId = order[OrdersTable.id]
+                        val createdAt = order[OrdersTable.createdAt]
+                        val sortKey = financeBucketSortKey(createdAt, period)
+                        val bucket = buckets.getOrPut(sortKey) {
+                            FinanceBucketAccumulator(
+                                label = financeBucketLabel(createdAt, period),
+                                sortKey = sortKey
+                            )
+                        }
+                        val items = itemsByOrderId[orderId].orEmpty()
+                        val orderRevenue = order[OrdersTable.total]?.toDouble() ?: 0.0
+                        val orderCost = items.fold(BigDecimal.ZERO) { total, item ->
+                            val productId = item[OrderItemsTable.productId]
+                            val importPrice = productId?.let { productInfos[it]?.importPrice } ?: BigDecimal.ZERO
+                            total.add(importPrice.multiply(item[OrderItemsTable.quantity].toBigDecimal()))
+                        }.toDouble()
+                        bucket.grossRevenue += orderRevenue
+                        bucket.netProfit += orderRevenue - orderCost - (refundsByOrderId[orderId] ?: 0.0)
+                        bucket.successfulOrderCount += 1
+                        bucket.quantitySold += items.sumOf { it[OrderItemsTable.quantity] }
+                    }
+
+                    val timeBreakdown = buckets.values
+                        .sortedBy { it.sortKey }
+                        .map {
+                            FinanceTimeBreakdownDto(
+                                label = it.label,
+                                sortKey = it.sortKey,
+                                grossRevenue = it.grossRevenue,
+                                netProfit = it.netProfit,
+                                orderCount = it.orderCount,
+                                successfulOrderCount = it.successfulOrderCount,
+                                quantitySold = it.quantitySold
+                            )
+                        }
 
                     val cancelledOrderCount = orderRows.count { it[OrdersTable.status] == "CANCELLED" }
                     val refundedOrderCount = orderRows.count { it[OrdersTable.paymentStatus] in refundedPaymentStatuses }
@@ -542,6 +785,8 @@ fun Route.adminRoutes(
 
                     FinanceSummaryDto(
                         shopId = null,
+                        period = period,
+                        periodLabel = financePeriodLabel(period),
                         grossRevenue = grossRevenue,
                         onlineRevenue = onlineRevenue,
                         posRevenue = posRevenue,
@@ -556,7 +801,10 @@ fun Route.adminRoutes(
                         refundedOrderCount = refundedOrderCount,
                         returnedOrderCount = returnedOrderCount,
                         totalOrderCount = orderRows.size,
-                        topSellingProducts = topSellingProducts
+                        topSellingProducts = topSellingProducts,
+                        timeBreakdown = timeBreakdown,
+                        categoryReports = categoryReports,
+                        productReports = productReports
                     )
                 }
 

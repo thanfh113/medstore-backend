@@ -1,820 +1,92 @@
-2026-05-26 05:06:11.009 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
-2026-05-26 05:06:11.259 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
-2026-05-26 05:06:12.212 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
-2026-05-26 05:06:13.117 [main] INFO  Exposed - Preparing create tables statements took 184ms
-2026-05-26 05:06:13.136 [main] INFO  Exposed - Executing create tables statements took 19ms
-2026-05-26 05:06:13.298 [main] INFO  Exposed - Extracting table columns took 162ms
-2026-05-26 05:06:13.386 [main] INFO  Exposed - Extracting primary keys took 88ms
-2026-05-26 05:06:13.486 [main] INFO  Exposed - Extracting column constraints took 70ms
-2026-05-26 05:06:13.486 [main] INFO  Exposed - Preparing alter table statements took 350ms
-2026-05-26 05:06:13.837 [main] INFO  Exposed - Executing alter table statements took 351ms
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
-2026-05-26 05:06:13.990 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
-2026-05-26 05:06:13.992 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
-2026-05-26 05:06:13.992 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+2026-05-29 00:02:32.315 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-29 00:02:32.732 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-29 00:02:34.658 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-29 00:02:35.570 [main] INFO  Exposed - Preparing create tables statements took 158ms
+2026-05-29 00:02:35.590 [main] INFO  Exposed - Executing create tables statements took 20ms
+2026-05-29 00:02:35.757 [main] INFO  Exposed - Extracting table columns took 165ms
+2026-05-29 00:02:35.823 [main] INFO  Exposed - Extracting primary keys took 66ms
+2026-05-29 00:02:35.904 [main] INFO  Exposed - Extracting column constraints took 53ms
+2026-05-29 00:02:35.904 [main] INFO  Exposed - Preparing alter table statements took 313ms
+2026-05-29 00:02:36.173 [main] INFO  Exposed - Executing alter table statements took 268ms
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-29 00:02:36.326 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-29 00:02:36.328 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-29 00:02:36.328 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-29 00:02:36.328 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-29 00:02:36.328 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-29 00:02:36.329 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-29 00:02:36.329 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-29 00:02:36.330 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-29 00:02:36.330 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-29 00:02:36.330 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-29 00:02:36.330 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-29 00:02:36.330 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-29 00:02:36.331 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-29 00:02:36.331 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
 		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
 		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
 		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
-2026-05-26 05:06:13.992 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
 		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
 		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
 		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
 		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
-2026-05-26 05:06:13.992 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
 		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
-2026-05-26 05:06:13.992 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
 		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
-2026-05-26 05:06:13.992 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
 		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
 		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
-2026-05-26 05:06:13.995 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
 		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
-2026-05-26 05:06:13.995 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
 		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
-2026-05-26 05:06:13.995 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
 		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
 		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
 		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
 		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
-2026-05-26 05:06:13.995 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+2026-05-29 00:02:36.332 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
 		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
 		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
-2026-05-26 05:06:13.997 [main] INFO  Exposed - Checking mapping consistence took 158ms
-2026-05-26 05:06:14.039 [main] INFO  Application - Database connected and tables created.
-2026-05-26 05:06:15.322 [main] INFO  Application - Application started in 4.784 seconds.
-2026-05-26 05:06:15.662 [main] INFO  Application - Responding at http://127.0.0.1:8080
-2026-05-26 05:07:07.766 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Auth login attempt: credential=admin@medstore.vn
-2026-05-26 05:07:08.068 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Auth login success: userId=u-admin-001, role=ADMIN
-2026-05-26 05:07:08.324 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 654ms
-2026-05-26 05:07:08.802 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 265ms
-2026-05-26 05:07:09.024 [eventLoopGroupProxy-4-5] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:07:09.109 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:07:09.177 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 326ms
-2026-05-26 05:07:09.187 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 638ms
-2026-05-26 05:07:09.342 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 811ms
-2026-05-26 05:07:09.385 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 41ms
-2026-05-26 05:10:57.258 [eventLoopGroupProxy-4-5] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:10:57.260 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 53ms
-2026-05-26 05:13:34.517 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Auth login attempt: credential=em2@medstore.vn
-2026-05-26 05:13:34.818 [eventLoopGroupProxy-4-9] INFO  Application - [31m400 Bad Request[m: [36mPOST[m - /api/v1/auth/login in 302ms
-2026-05-26 05:13:39.900 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Auth login attempt: credential=em2@medstore.vn
-2026-05-26 05:13:40.168 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Auth login success: userId=9c0cd412-6993-41de-9ebf-69a85eec5938, role=EMPLOYEE
-2026-05-26 05:13:40.186 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 287ms
-2026-05-26 05:13:40.314 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 32ms
-2026-05-26 05:13:40.352 [eventLoopGroupProxy-4-11] ERROR Application - Unhandled error
-com.example.nhathuoc.util.AuthorizationException: Required role: ADMIN, actual role: EMPLOYEE
-	at com.example.nhathuoc.util.AuthHelperKt.requireRole(AuthHelper.kt:50)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$2.invokeSuspend(AdminRoutes.kt:454)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$2.invoke(AdminRoutes.kt)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$2.invoke(AdminRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-2026-05-26 05:13:40.378 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:13:40.368 [eventLoopGroupProxy-4-12] ERROR Application - Unhandled error
-com.example.nhathuoc.util.AuthorizationException: Required role: ADMIN, actual role: EMPLOYEE
-	at com.example.nhathuoc.util.AuthHelperKt.requireRole(AuthHelper.kt:50)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$15.invokeSuspend(AdminRoutes.kt:869)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$15.invoke(AdminRoutes.kt)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$15.invoke(AdminRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-2026-05-26 05:13:40.398 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 116ms
-2026-05-26 05:13:40.412 [eventLoopGroupProxy-4-1] ERROR Application - Unhandled error
-com.example.nhathuoc.util.AuthorizationException: Required role: ADMIN, actual role: EMPLOYEE
-	at com.example.nhathuoc.util.AuthHelperKt.requireRole(AuthHelper.kt:50)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$3.invokeSuspend(AdminRoutes.kt:572)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$3.invoke(AdminRoutes.kt)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$3.invoke(AdminRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-2026-05-26 05:13:40.474 [eventLoopGroupProxy-4-11] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:13:40.481 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 107ms
-2026-05-26 05:13:40.507 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 216ms
-2026-05-26 05:13:40.562 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 280ms
-2026-05-26 05:13:44.112 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:13:44.112 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 63ms
-2026-05-26 05:15:52.988 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 85ms
-2026-05-26 05:15:54.349 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:15:54.352 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 39ms
-2026-05-26 05:19:02.934 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Auth login attempt: credential=admin@medstore.vn
-2026-05-26 05:19:03.184 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Auth login success: userId=u-admin-001, role=ADMIN
-2026-05-26 05:19:03.210 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 277ms
-2026-05-26 05:19:03.338 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 57ms
-2026-05-26 05:19:03.344 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 33ms
-2026-05-26 05:19:03.381 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:19:03.384 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 105ms
-2026-05-26 05:19:03.405 [eventLoopGroupProxy-4-11] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:19:03.409 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 132ms
-2026-05-26 05:19:03.485 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 100ms
-2026-05-26 05:19:05.040 [eventLoopGroupProxy-4-12] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:19:05.042 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 44ms
-2026-05-26 05:19:06.905 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 85ms
-2026-05-26 05:19:08.919 [eventLoopGroupProxy-4-3] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:19:08.921 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 59ms
-2026-05-26 05:20:44.172 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 13ms
-2026-05-26 05:20:45.056 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:20:45.058 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 39ms
-2026-05-26 05:20:45.840 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 101ms
-2026-05-26 05:20:46.430 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:20:46.432 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 48ms
-2026-05-26 05:21:17.289 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:21:17.291 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 64ms
-2026-05-26 05:21:17.813 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 90ms
-2026-05-26 05:21:21.917 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders/2e2f2a54-fa4e-47e1-a812-9550e7cbe75c in 251ms
-2026-05-26 05:22:09.582 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:22:09.583 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 36ms
-2026-05-26 05:22:52.665 [eventLoopGroupProxy-4-11] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:22:52.668 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 70ms
-2026-05-26 05:24:15.714 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders/c35e96ec-1e65-4f33-aaca-dc9ff37f308a in 15ms
-2026-05-26 05:24:16.095 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 05:24:16.102 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 121ms
-2026-05-26 08:16:27.593 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
-2026-05-26 08:16:28.147 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
-2026-05-26 08:16:31.255 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
-2026-05-26 08:16:34.726 [main] INFO  Exposed - Preparing create tables statements took 640ms
-2026-05-26 08:16:34.813 [main] INFO  Exposed - Executing create tables statements took 87ms
-2026-05-26 08:16:35.291 [main] INFO  Exposed - Extracting table columns took 476ms
-2026-05-26 08:16:35.527 [main] INFO  Exposed - Extracting primary keys took 236ms
-2026-05-26 08:16:36.349 [main] INFO  Exposed - Extracting column constraints took 269ms
-2026-05-26 08:16:36.351 [main] INFO  Exposed - Preparing alter table statements took 1536ms
-2026-05-26 08:16:37.234 [main] INFO  Exposed - Executing alter table statements took 883ms
-2026-05-26 08:16:37.578 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
-2026-05-26 08:16:37.578 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
-2026-05-26 08:16:37.578 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
-2026-05-26 08:16:37.578 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
-2026-05-26 08:16:37.578 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
-2026-05-26 08:16:37.578 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
-2026-05-26 08:16:37.581 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
-2026-05-26 08:16:37.582 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
-2026-05-26 08:16:37.584 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
-2026-05-26 08:16:37.586 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
-2026-05-26 08:16:37.590 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
-2026-05-26 08:16:37.591 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
-2026-05-26 08:16:37.593 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
-2026-05-26 08:16:37.593 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
-2026-05-26 08:16:37.593 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
-2026-05-26 08:16:37.595 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
-		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
-		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
-		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
-2026-05-26 08:16:37.595 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
-		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
-		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
-		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
-		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
-2026-05-26 08:16:37.595 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
-		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
-2026-05-26 08:16:37.597 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
-		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
-2026-05-26 08:16:37.597 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
-		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
-		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
-2026-05-26 08:16:37.597 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
-		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
-2026-05-26 08:16:37.597 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
-		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
-2026-05-26 08:16:37.597 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
-		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
-		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
-		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
-		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
-2026-05-26 08:16:37.597 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
-		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
-		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
-2026-05-26 08:16:37.606 [main] INFO  Exposed - Checking mapping consistence took 369ms
-2026-05-26 08:16:37.738 [main] INFO  Application - Database connected and tables created.
-2026-05-26 08:16:40.983 [main] INFO  Application - Application started in 14.842 seconds.
-2026-05-26 08:16:42.766 [main] INFO  Application - Responding at http://127.0.0.1:8080
-2026-05-26 08:16:48.809 [eventLoopGroupProxy-4-1] INFO  Application - [31m401 Unauthorized[m: [36mGET[m - /api/v1/internal/dashboard in 794ms
-2026-05-26 08:16:54.068 [eventLoopGroupProxy-4-6] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 596ms
-2026-05-26 08:16:54.258 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 784ms
-2026-05-26 08:16:54.472 [eventLoopGroupProxy-4-5] WARN  Exposed - Transaction attempt #0 failed: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException: Deadlock found when trying to get lock; try restarting transaction. Statement(s): UPDATE refresh_tokens SET revoked_at=? WHERE refresh_tokens.user_id = ?
-org.jetbrains.exposed.exceptions.ExposedSQLException: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException: Deadlock found when trying to get lock; try restarting transaction
-	at org.jetbrains.exposed.sql.statements.Statement.executeIn$exposed_core(Statement.kt:99)
-	at org.jetbrains.exposed.sql.Transaction.exec(Transaction.kt:292)
-	at org.jetbrains.exposed.sql.Transaction.exec(Transaction.kt:269)
-	at org.jetbrains.exposed.sql.statements.Statement.execute(Statement.kt:59)
-	at com.example.nhathuoc.routes.AuthRoutesKt$authRoutes$1$3.invokeSuspend$lambda$10(AuthRoutes.kt:415)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.inTopLevelTransaction$run(ThreadLocalTransactionManager.kt:355)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.inTopLevelTransaction$lambda$11(ThreadLocalTransactionManager.kt:402)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.keepAndRestoreTransactionRefAfterRun(ThreadLocalTransactionManager.kt:410)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.inTopLevelTransaction(ThreadLocalTransactionManager.kt:401)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.transaction$lambda$5(ThreadLocalTransactionManager.kt:310)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.keepAndRestoreTransactionRefAfterRun(ThreadLocalTransactionManager.kt:410)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.transaction(ThreadLocalTransactionManager.kt:259)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.transaction(ThreadLocalTransactionManager.kt:237)
-	at org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManagerKt.transaction$default(ThreadLocalTransactionManager.kt:236)
-	at com.example.nhathuoc.routes.AuthRoutesKt$authRoutes$1$3.invokeSuspend(AuthRoutes.kt:276)
-	at com.example.nhathuoc.routes.AuthRoutesKt$authRoutes$1$3.invoke(AuthRoutes.kt)
-	at com.example.nhathuoc.routes.AuthRoutesKt$authRoutes$1$3.invoke(AuthRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-Caused by: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException: Deadlock found when trying to get lock; try restarting transaction
-	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:115)
-	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:114)
-	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:988)
-	at com.mysql.cj.jdbc.ClientPreparedStatement.executeUpdateInternal(ClientPreparedStatement.java:1166)
-	at com.mysql.cj.jdbc.ClientPreparedStatement.executeUpdateInternal(ClientPreparedStatement.java:1101)
-	at com.mysql.cj.jdbc.ClientPreparedStatement.executeLargeUpdate(ClientPreparedStatement.java:1467)
-	at com.mysql.cj.jdbc.ClientPreparedStatement.executeUpdate(ClientPreparedStatement.java:1084)
-	at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeUpdate(ProxyPreparedStatement.java:61)
-	at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeUpdate(HikariProxyPreparedStatement.java)
-	at org.jetbrains.exposed.sql.statements.jdbc.JdbcPreparedStatementImpl.executeUpdate(JdbcPreparedStatementImpl.kt:53)
-	at org.jetbrains.exposed.sql.statements.UpdateStatement.executeInternal(UpdateStatement.kt:29)
-	at org.jetbrains.exposed.sql.statements.UpdateStatement.executeInternal(UpdateStatement.kt:21)
-	at org.jetbrains.exposed.sql.statements.Statement.executeIn$exposed_core(Statement.kt:97)
-	... 92 common frames omitted
-2026-05-26 08:16:54.489 [eventLoopGroupProxy-4-5] WARN  Exposed - Wait 0 milliseconds before retrying
-2026-05-26 08:22:56.014 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/ee15403b-5ef3-483c-a8bc-63df2569f79e in 30ms
-2026-05-26 08:22:56.073 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/ee15403b-5ef3-483c-a8bc-63df2569f79e/reviews in 34ms
-2026-05-26 08:39:29.729 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/flash-sale in 115ms
-2026-05-26 08:39:29.734 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/best-sellers in 120ms
-2026-05-26 08:46:02.274 [eventLoopGroupProxy-4-7] INFO  Application - Desktop/Auth login attempt: credential=em2@medstore.vn
-2026-05-26 08:46:02.910 [eventLoopGroupProxy-4-7] INFO  Application - Desktop/Auth login success: userId=9c0cd412-6993-41de-9ebf-69a85eec5938, role=EMPLOYEE
-2026-05-26 08:46:02.984 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 719ms
-2026-05-26 08:46:03.775 [eventLoopGroupProxy-4-3] ERROR Application - Unhandled error
-com.example.nhathuoc.util.AuthorizationException: Required role: ADMIN, actual role: EMPLOYEE
-	at com.example.nhathuoc.util.AuthHelperKt.requireRole(AuthHelper.kt:50)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$3.invokeSuspend(AdminRoutes.kt:572)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$3.invoke(AdminRoutes.kt)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$3.invoke(AdminRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-2026-05-26 08:46:03.787 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 08:46:03.789 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 08:46:03.783 [eventLoopGroupProxy-4-9] ERROR Application - Unhandled error
-com.example.nhathuoc.util.AuthorizationException: Required role: ADMIN, actual role: EMPLOYEE
-	at com.example.nhathuoc.util.AuthHelperKt.requireRole(AuthHelper.kt:50)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$2.invokeSuspend(AdminRoutes.kt:454)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$2.invoke(AdminRoutes.kt)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$2.invoke(AdminRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-2026-05-26 08:46:03.784 [eventLoopGroupProxy-4-5] ERROR Application - Unhandled error
-com.example.nhathuoc.util.AuthorizationException: Required role: ADMIN, actual role: EMPLOYEE
-	at com.example.nhathuoc.util.AuthHelperKt.requireRole(AuthHelper.kt:50)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$15.invokeSuspend(AdminRoutes.kt:869)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$15.invoke(AdminRoutes.kt)
-	at com.example.nhathuoc.routes.AdminRoutesKt$adminRoutes$4$1$15.invoke(AdminRoutes.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invokeSuspend(RoutingNode.kt:127)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.server.routing.RoutingNode$buildPipeline$1$1.invoke(RoutingNode.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.routing.RoutingRoot.executeResult(RoutingRoot.kt:208)
-	at io.ktor.server.routing.RoutingRoot.interceptor(RoutingRoot.kt:71)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invokeSuspend(RoutingRoot.kt:154)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.server.routing.RoutingRoot$Plugin$install$1.invoke(RoutingRoot.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invokeSuspend(BaseApplicationEngine.kt:119)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1.invoke(BaseApplicationEngine.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invokeSuspend(CommonHooks.kt:49)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1$1.invoke(CommonHooks.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
-	at kotlinx.coroutines.CoroutineScopeKt.coroutineScope(CoroutineScope.kt:285)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invokeSuspend(CommonHooks.kt:48)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.server.application.hooks.CallFailed$install$1.invoke(CommonHooks.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invokeSuspend(DefaultEnginePipeline.kt:129)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.server.engine.DefaultEnginePipelineKt$defaultEnginePipeline$1.invoke(DefaultEnginePipeline.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invokeSuspend(BaseApplicationResponse.kt:349)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1.invoke(BaseApplicationResponse.kt)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceedLoop(DebugPipelineContext.kt:79)
-	at io.ktor.util.pipeline.DebugPipelineContext.proceed(DebugPipelineContext.kt:57)
-	at io.ktor.util.pipeline.DebugPipelineContext.execute$ktor_utils(DebugPipelineContext.kt:63)
-	at io.ktor.util.pipeline.Pipeline.execute(Pipeline.kt:92)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invokeSuspend(Pipeline.kt:510)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1$invokeSuspend$$inlined$execute$1.invoke(Pipeline.kt)
-	at io.ktor.util.debug.ContextUtilsKt.initContextInDebugMode(ContextUtils.kt:19)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invokeSuspend(NettyApplicationCallHandler.kt:140)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at io.ktor.server.netty.NettyApplicationCallHandler$handleRequest$1.invoke(NettyApplicationCallHandler.kt)
-	at kotlinx.coroutines.intrinsics.UndispatchedKt.startCoroutineUndispatched(Undispatched.kt:20)
-	at kotlinx.coroutines.CoroutineStart.invoke(CoroutineStart.kt:360)
-	at kotlinx.coroutines.AbstractCoroutine.start(AbstractCoroutine.kt:134)
-	at kotlinx.coroutines.BuildersKt__Builders_commonKt.launch(Builders.common.kt:52)
-	at kotlinx.coroutines.BuildersKt.launch(Unknown Source)
-	at io.ktor.server.netty.NettyApplicationCallHandler.handleRequest(NettyApplicationCallHandler.kt:41)
-	at io.ktor.server.netty.NettyApplicationCallHandler.channelRead(NettyApplicationCallHandler.kt:33)
-	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
-	at io.netty.channel.AbstractChannelHandlerContext.access$600(AbstractChannelHandlerContext.java:61)
-	at io.netty.channel.AbstractChannelHandlerContext$7.run(AbstractChannelHandlerContext.java:425)
-	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:472)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:998)
-	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.base/java.lang.Thread.run(Thread.java:840)
-2026-05-26 08:46:03.842 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 322ms
-2026-05-26 08:46:03.883 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 342ms
-2026-05-26 08:46:03.885 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 338ms
-2026-05-26 08:46:04.148 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 630ms
-2026-05-26 08:46:04.395 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 428ms
-2026-05-26 08:46:48.296 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/319a2a22-d92f-4f18-85c8-dec19e2be1ee in 20ms
-2026-05-26 08:46:48.338 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/319a2a22-d92f-4f18-85c8-dec19e2be1ee/reviews in 12ms
-2026-05-26 08:47:19.642 [eventLoopGroupProxy-4-7] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 08:47:19.646 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 96ms
-2026-05-26 08:47:26.757 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
-2026-05-26 08:47:26.757 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 84ms
-2026-05-26 08:50:07.352 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/319a2a22-d92f-4f18-85c8-dec19e2be1ee in 8ms
-2026-05-26 08:50:07.396 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/319a2a22-d92f-4f18-85c8-dec19e2be1ee/reviews in 8ms
-2026-05-26 09:01:31.139 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 174ms
-2026-05-26 09:01:33.038 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders/d76c9290-0e40-4d47-b52f-fdedd7b8174c in 62ms
-2026-05-26 09:01:37.650 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/internal/orders/d76c9290-0e40-4d47-b52f-fdedd7b8174c/status in 368ms
-2026-05-26 09:09:05.461 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/319a2a22-d92f-4f18-85c8-dec19e2be1ee in 12ms
-2026-05-26 09:09:05.492 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/products/319a2a22-d92f-4f18-85c8-dec19e2be1ee/reviews in 6ms
+2026-05-29 00:02:36.333 [main] INFO  Exposed - Checking mapping consistence took 160ms
+2026-05-29 00:02:36.370 [main] INFO  Application - Database connected and tables created.
+2026-05-29 00:02:37.519 [main] INFO  Application - Application started in 6.271 seconds.
+2026-05-29 00:02:37.854 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-29 00:06:02.656 [eventLoopGroupProxy-4-1] INFO  Application - [31m401 Unauthorized[m: [36mGET[m - /api/v1/internal/dashboard in 257ms
+2026-05-29 00:06:20.355 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Auth login attempt: credential=admin@medstore.vn
+2026-05-29 00:06:20.884 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Auth login success: userId=u-admin-001, role=ADMIN
+2026-05-29 00:06:21.091 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 820ms
+2026-05-29 00:06:21.734 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 325ms
+2026-05-29 00:06:21.736 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 301ms
+2026-05-29 00:06:21.827 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:06:21.886 [eventLoopGroupProxy-4-6] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:06:21.913 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 483ms
+2026-05-29 00:06:21.918 [eventLoopGroupProxy-4-6] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 484ms
+2026-05-29 00:06:22.220 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 823ms
+2026-05-29 00:06:23.507 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:06:23.512 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 96ms
+2026-05-29 00:06:24.772 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 237ms
+2026-05-29 00:06:26.535 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:06:26.541 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 124ms
+2026-05-29 00:07:00.106 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:07:00.108 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 64ms
+2026-05-29 00:07:00.806 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 147ms
+2026-05-29 00:07:01.186 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:07:01.189 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 62ms
+2026-05-29 00:07:01.931 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 19ms
+2026-05-29 00:07:02.931 [eventLoopGroupProxy-4-8] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:07:02.934 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 75ms
+2026-05-29 00:07:08.246 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:07:08.248 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 70ms
+2026-05-29 00:07:08.899 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 227ms
+2026-05-29 00:07:09.276 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-29 00:07:09.280 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 108ms

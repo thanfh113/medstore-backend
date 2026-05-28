@@ -1,0 +1,198 @@
+2026-05-28 00:48:35.522 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-28 00:48:35.770 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-28 00:48:36.655 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-28 00:48:37.582 [main] INFO  Exposed - Preparing create tables statements took 193ms
+2026-05-28 00:48:37.607 [main] INFO  Exposed - Executing create tables statements took 24ms
+2026-05-28 00:48:37.822 [main] INFO  Exposed - Extracting table columns took 215ms
+2026-05-28 00:48:37.922 [main] INFO  Exposed - Extracting primary keys took 98ms
+2026-05-28 00:48:38.035 [main] INFO  Exposed - Extracting column constraints took 79ms
+2026-05-28 00:48:38.036 [main] INFO  Exposed - Preparing alter table statements took 429ms
+2026-05-28 00:48:38.513 [main] INFO  Exposed - Executing alter table statements took 476ms
+2026-05-28 00:48:38.688 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-28 00:48:38.688 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-28 00:48:38.689 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-28 00:48:38.690 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-28 00:48:38.691 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-28 00:48:38.691 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-28 00:48:38.691 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-28 00:48:38.691 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-28 00:48:38.691 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-28 00:48:38.693 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-28 00:48:38.693 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-28 00:48:38.693 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-28 00:48:38.693 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-28 00:48:38.694 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-28 00:48:38.694 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-28 00:48:38.694 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-28 00:48:38.694 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-28 00:48:38.694 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-28 00:48:38.695 [main] INFO  Exposed - Checking mapping consistence took 182ms
+2026-05-28 00:48:38.756 [main] INFO  Application - Database connected and tables created.
+2026-05-28 00:48:39.904 [main] INFO  Application - Application started in 4.884 seconds.
+2026-05-28 00:48:40.281 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-28 00:49:23.387 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Auth login attempt: credential=admin@medstore.vn
+2026-05-28 00:49:23.702 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Auth login success: userId=u-admin-001, role=ADMIN
+2026-05-28 00:49:23.933 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 627ms
+2026-05-28 00:49:24.386 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 228ms
+2026-05-28 00:49:24.399 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 261ms
+2026-05-28 00:49:24.561 [eventLoopGroupProxy-4-12] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:49:24.595 [eventLoopGroupProxy-4-5] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:49:24.631 [eventLoopGroupProxy-4-12] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 465ms
+2026-05-28 00:49:24.633 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 435ms
+2026-05-28 00:49:24.880 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 740ms
+2026-05-28 00:51:36.425 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:51:36.428 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 62ms
+2026-05-28 00:51:38.338 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 22ms
+2026-05-28 00:51:39.177 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:51:39.181 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 58ms
+2026-05-28 00:51:39.892 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 161ms
+2026-05-28 00:51:40.752 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders/d76c9290-0e40-4d47-b52f-fdedd7b8174c in 33ms
+2026-05-28 00:51:44.368 [eventLoopGroupProxy-4-11] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:51:44.370 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 76ms
+2026-05-28 00:51:45.097 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 135ms
+2026-05-28 00:51:47.647 [eventLoopGroupProxy-4-3] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:51:47.649 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 71ms
+2026-05-28 00:51:49.348 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:51:49.350 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 65ms
+2026-05-28 00:54:42.502 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:42.504 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 53ms
+2026-05-28 00:54:42.892 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 123ms
+2026-05-28 00:54:43.280 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:43.282 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 53ms
+2026-05-28 00:54:44.282 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 15ms
+2026-05-28 00:54:45.206 [eventLoopGroupProxy-4-6] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 71ms
+2026-05-28 00:54:46.157 [eventLoopGroupProxy-4-8] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:46.160 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 65ms
+2026-05-28 00:54:46.583 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 125ms
+2026-05-28 00:54:46.991 [eventLoopGroupProxy-4-11] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:46.994 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 54ms
+2026-05-28 00:54:49.504 [eventLoopGroupProxy-4-5] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:49.507 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 54ms
+2026-05-28 00:54:51.141 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 101ms
+2026-05-28 00:54:51.738 [eventLoopGroupProxy-4-8] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:51.742 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 44ms
+2026-05-28 00:54:52.283 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 92ms
+2026-05-28 00:54:56.320 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 00:54:56.324 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 39ms
+2026-05-28 01:08:52.909 [main] INFO  Application - No ktor.deployment.watch patterns match classpath entries, automatic reload is not active
+2026-05-28 01:08:53.117 [main] INFO  Application - Cloudinary initialized: cloud=dh3lcg95f
+2026-05-28 01:08:53.868 [main] INFO  c.e.nhathuoc.service.FcmService - Firebase Admin SDK initialized — FCM push notifications enabled
+2026-05-28 01:08:54.544 [main] INFO  Exposed - Preparing create tables statements took 104ms
+2026-05-28 01:08:54.568 [main] INFO  Exposed - Executing create tables statements took 24ms
+2026-05-28 01:08:54.824 [main] INFO  Exposed - Extracting table columns took 256ms
+2026-05-28 01:08:54.929 [main] INFO  Exposed - Extracting primary keys took 105ms
+2026-05-28 01:08:55.032 [main] INFO  Exposed - Extracting column constraints took 63ms
+2026-05-28 01:08:55.033 [main] INFO  Exposed - Preparing alter table statements took 465ms
+2026-05-28 01:08:55.349 [main] INFO  Exposed - Executing alter table statements took 316ms
+2026-05-28 01:08:55.510 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_phone -> in mapping users_phone_unique
+2026-05-28 01:08:55.511 [main] INFO  Exposed - Index on table 'users' differs only in name: in db uq_users_email -> in mapping users_email_unique
+2026-05-28 01:08:55.512 [main] INFO  Exposed - Index on table 'employee_profiles' differs only in name: in db idx_employee_profiles_verified -> in mapping employee_profiles_qualification_verified
+2026-05-28 01:08:55.512 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_sku -> in mapping products_sku_unique
+2026-05-28 01:08:55.513 [main] INFO  Exposed - Index on table 'products' differs only in name: in db uq_products_slug -> in mapping products_slug_unique
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_type -> in mapping product_certificates_file_type
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'product_certificates' differs only in name: in db idx_product_certificates_active -> in mapping product_certificates_is_active
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'orders' differs only in name: in db uq_order_code -> in mapping orders_order_code_unique
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'coupons' differs only in name: in db uq_coupons_code -> in mapping coupons_code_unique
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'reward_transactions' differs only in name: in db idx_reward_transactions_ref -> in mapping reward_transactions_ref_type_ref_id
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_category -> in mapping reward_products_category
+2026-05-28 01:08:55.514 [main] INFO  Exposed - Index on table 'reward_products' differs only in name: in db idx_reward_products_active_cost -> in mapping reward_products_is_active_point_cost
+2026-05-28 01:08:55.515 [main] INFO  Exposed - Index on table 'reward_redemptions' differs only in name: in db idx_reward_redemptions_status -> in mapping reward_redemptions_status
+2026-05-28 01:08:55.515 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db uq_reviews_user_order_product -> in mapping reviews_user_id_order_id_product_id_unique
+2026-05-28 01:08:55.515 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_created_at -> in mapping reviews_created_at
+2026-05-28 01:08:55.515 [main] INFO  Exposed - Index on table 'reviews' differs only in name: in db idx_reviews_product_status -> in mapping reviews_product_id_status
+2026-05-28 01:08:55.515 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db idx_review_reports_status -> in mapping review_reports_status
+2026-05-28 01:08:55.515 [main] INFO  Exposed - Index on table 'review_reports' differs only in name: in db uq_review_report_once -> in mapping review_reports_review_id_reporter_user_id_unique
+2026-05-28 01:08:55.516 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_status -> in mapping order_complaints_status
+2026-05-28 01:08:55.516 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db idx_order_complaints_refund_status -> in mapping order_complaints_refund_status
+2026-05-28 01:08:55.516 [main] INFO  Exposed - Index on table 'order_complaints' differs only in name: in db uq_order_complaints_code -> in mapping order_complaints_complaint_code_unique
+2026-05-28 01:08:55.516 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'payments':
+		Index 'idx_payments_status' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.status
+		Index 'idx_payments_transaction_id' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.transaction_id
+		Index 'idx_payments_method' for 'payments' on columns com.example.nhathuoc.database.tables.PaymentsTable.method
+2026-05-28 01:08:55.516 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'products':
+		Index 'idx_products_exp_date' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.exp_date
+		Index 'idx_products_risk_classification' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.risk_classification
+		Index 'idx_products_search' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.name, com.example.nhathuoc.database.tables.ProductsTable.description, com.example.nhathuoc.database.tables.ProductsTable.brand
+		Index 'idx_products_stock_exp' for 'products' on columns com.example.nhathuoc.database.tables.ProductsTable.stock, com.example.nhathuoc.database.tables.ProductsTable.exp_date
+2026-05-28 01:08:55.516 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'coupons':
+		Index 'idx_coupons_reward_template' for 'coupons' on columns com.example.nhathuoc.database.tables.CouponsTable.is_reward_voucher_template, com.example.nhathuoc.database.tables.CouponsTable.is_active
+2026-05-28 01:08:55.516 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'categories':
+		Unique Index 'uq_categories_slug' for 'categories' on columns com.example.nhathuoc.database.tables.CategoriesTable.slug
+2026-05-28 01:08:55.517 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'banners':
+		Index 'idx_banners_active' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active
+		Index 'idx_banners_active_date' for 'banners' on columns com.example.nhathuoc.database.tables.BannersTable.is_active, com.example.nhathuoc.database.tables.BannersTable.start_dt, com.example.nhathuoc.database.tables.BannersTable.end_dt
+2026-05-28 01:08:55.517 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_redemptions':
+		Unique Index 'uq_reward_redemptions_issued_voucher_code' for 'reward_redemptions' on columns com.example.nhathuoc.database.tables.RewardRedemptionsTable.issued_voucher_code
+2026-05-28 01:08:55.517 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'reward_products':
+		Index 'idx_reward_products_type' for 'reward_products' on columns com.example.nhathuoc.database.tables.RewardProductsTable.reward_type
+2026-05-28 01:08:55.517 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'orders':
+		Index 'idx_orders_channel' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.order_channel
+		Index 'idx_orders_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.status
+		Index 'fk_orders_branch_id__id' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.branch_id
+		Index 'idx_orders_payment_status' for 'orders' on columns com.example.nhathuoc.database.tables.OrdersTable.payment_status
+2026-05-28 01:08:55.517 [main] WARN  Exposed - Indices exist in database and not mapped in code on class 'notifications':
+		Index 'idx_notifications_type' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.type
+		Index 'idx_notifications_is_read' for 'notifications' on columns com.example.nhathuoc.database.tables.NotificationsTable.is_read
+2026-05-28 01:08:55.518 [main] INFO  Exposed - Checking mapping consistence took 169ms
+2026-05-28 01:08:55.566 [main] INFO  Application - Database connected and tables created.
+2026-05-28 01:08:56.993 [main] INFO  Application - Application started in 4.581 seconds.
+2026-05-28 01:08:57.494 [main] INFO  Application - Responding at http://127.0.0.1:8080
+2026-05-28 01:09:01.975 [eventLoopGroupProxy-4-1] INFO  Application - [31m401 Unauthorized[m: [36mGET[m - /api/v1/internal/dashboard in 558ms
+2026-05-28 01:09:17.491 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Auth login attempt: credential=admin@medstore.vn
+2026-05-28 01:09:17.914 [eventLoopGroupProxy-4-2] INFO  Application - Desktop/Auth login success: userId=u-admin-001, role=ADMIN
+2026-05-28 01:09:18.022 [eventLoopGroupProxy-4-2] INFO  Application - [32m200 OK[m: [36mPOST[m - /api/v1/auth/login in 586ms
+2026-05-28 01:09:18.545 [eventLoopGroupProxy-4-3] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 249ms
+2026-05-28 01:09:18.565 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/dashboard in 266ms
+2026-05-28 01:09:18.852 [eventLoopGroupProxy-4-7] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:09:18.862 [eventLoopGroupProxy-4-10] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:09:18.942 [eventLoopGroupProxy-4-7] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 643ms
+2026-05-28 01:09:18.940 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 638ms
+2026-05-28 01:09:19.168 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 865ms
+2026-05-28 01:09:21.612 [eventLoopGroupProxy-4-10] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 214ms
+2026-05-28 01:09:22.997 [eventLoopGroupProxy-4-11] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:09:23.003 [eventLoopGroupProxy-4-11] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 82ms
+2026-05-28 01:11:02.237 [eventLoopGroupProxy-4-6] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:11:02.239 [eventLoopGroupProxy-4-6] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 57ms
+2026-05-28 01:11:05.212 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 138ms
+2026-05-28 01:11:06.242 [eventLoopGroupProxy-4-9] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:11:06.245 [eventLoopGroupProxy-4-9] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 74ms
+2026-05-28 01:11:07.154 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 102ms
+2026-05-28 01:11:07.507 [eventLoopGroupProxy-4-4] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:11:07.510 [eventLoopGroupProxy-4-4] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 65ms
+2026-05-28 01:11:09.231 [eventLoopGroupProxy-4-5] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 114ms
+2026-05-28 01:11:09.581 [eventLoopGroupProxy-4-6] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:11:09.584 [eventLoopGroupProxy-4-6] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 60ms
+2026-05-28 01:11:10.458 [eventLoopGroupProxy-4-8] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/orders in 127ms
+2026-05-28 01:11:27.880 [eventLoopGroupProxy-4-1] INFO  Application - Desktop/Internal products response: shopId=default-store, page=1, limit=200, returned=27
+2026-05-28 01:11:27.883 [eventLoopGroupProxy-4-1] INFO  Application - [32m200 OK[m: [36mGET[m - /api/v1/internal/products in 66ms
