@@ -10,8 +10,21 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
 @Serializable
-private data class AddressIdResponse(
-    val addressId: String
+private data class AddressIdResponse(val addressId: String)
+
+@Serializable
+private data class UpdateUserRouteRequest(
+    val fullName: String? = null,
+    val email: String? = null,
+    val avatarUrl: String? = null,
+    val gender: Int? = null,
+    val dateOfBirth: String? = null
+)
+
+@Serializable
+private data class UpdateUserRouteResponse(
+    val message: String,
+    val user: UserResponse
 )
 
 // ─── User profile & addresses ─────────────────────────────────
@@ -38,9 +51,15 @@ fun Route.userRoutes() {
 
                     call.respond(
                         HttpStatusCode.OK,
-                        RouteDataMessageResponse(
-                            data = userProfile,
-                            message = "User profile retrieved successfully"
+                        UserResponse(
+                            id          = userProfile.id,
+                            phone       = userProfile.phone,
+                            fullName    = userProfile.fullName,
+                            email       = userProfile.email,
+                            role        = userProfile.role,
+                            avatarUrl   = userProfile.avatarUrl,
+                            gender      = genderToInt(userProfile.gender),
+                            dateOfBirth = userProfile.dateOfBirth
                         )
                     )
                 } catch (e: Exception) {
@@ -61,12 +80,31 @@ fun Route.userRoutes() {
                             mapOf("error" to "User ID not found")
                         )
 
-                    val request = call.receive<UpdateUserProfileRequest>()
-                    userService.updateUserProfile(userId, request)
+                    val req = call.receive<UpdateUserRouteRequest>()
+                    userService.updateUserProfile(userId, UpdateUserProfileRequest(
+                        fullName    = req.fullName,
+                        email       = req.email,
+                        avatarUrl   = req.avatarUrl,
+                        gender      = genderToString(req.gender),
+                        dateOfBirth = req.dateOfBirth
+                    ))
 
+                    val updated = userService.getUserProfile(userId)!!
                     call.respond(
                         HttpStatusCode.OK,
-                        mapOf("message" to "User profile updated successfully")
+                        UpdateUserRouteResponse(
+                            message = "Cập nhật thông tin thành công",
+                            user = UserResponse(
+                                id          = updated.id,
+                                phone       = updated.phone,
+                                fullName    = updated.fullName,
+                                email       = updated.email,
+                                role        = updated.role,
+                                avatarUrl   = updated.avatarUrl,
+                                gender      = genderToInt(updated.gender),
+                                dateOfBirth = updated.dateOfBirth
+                            )
+                        )
                     )
                 } catch (e: IllegalArgumentException) {
                     call.respond(

@@ -548,4 +548,22 @@ object PaymentsTable : Table("payments") {
     override val primaryKey = PrimaryKey(id)
 }
 
+// ─────────────────────────────────────────────────────────────
+// PASSWORD RESET
+// ─────────────────────────────────────────────────────────────
+
+object PasswordResetTokensTable : Table("password_reset_tokens") {
+    val id        = varchar("id", 36)
+    val userId    = varchar("user_id", 36).references(UsersTable.id)
+    val otp       = varchar("otp", 6)
+    val expiresAt = datetime("expires_at")
+    val usedAt    = datetime("used_at").nullable()
+    val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
+    override val primaryKey = PrimaryKey(id)
+
+    init {
+        index(false, userId)
+    }
+}
+
 

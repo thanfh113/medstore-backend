@@ -70,6 +70,9 @@ dependencies {
     // Password hashing
     implementation("org.mindrot:jbcrypt:0.4")
 
+    // Email (Gmail SMTP)
+    implementation("com.sun.mail:javax.mail:1.6.2")
+
     // Logging
     implementation("ch.qos.logback:logback-classic:$logback_version")
 

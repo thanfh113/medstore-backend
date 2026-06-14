@@ -72,7 +72,10 @@ fun Application.configureDatabase() {
             BannersTable,
 
             // Payment tables
-            PaymentsTable
+            PaymentsTable,
+
+            // Password reset
+            PasswordResetTokensTable
         )
 
         migrateRefreshTokensTable()
